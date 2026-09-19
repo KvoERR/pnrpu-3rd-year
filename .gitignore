@@ -1,0 +1,47 @@
+@'
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+
+# Virtual machines
+*.vdi
+*.vmdk
+*.vhd
+*.vbox
+*.ova
+*.qcow2
+
+# Build artifacts
+obj/
+bin/
+target/
+dist/
+build/
+*.dll
+*.exe
+*.so
+*.dylib
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# drawio backups
+.$*.bkp
+
+# Misc
+*.log
+*.tmp
+'@ | Out-File -Encoding utf8 .gitignore

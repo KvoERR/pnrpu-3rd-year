@@ -1,0 +1,67 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.7.17 Chrome/128.0.6613.36 Electron/32.0.1 Safari/537.36" version="24.7.17">
+  <diagram name="Страница — 1" id="LshzHVqadOUN38n-vcTJ">
+    <mxGraphModel dx="1216" dy="655" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="52YSkWqeOz1_GMgy02Ui-1" value="Посетитель" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="160" y="180" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="52YSkWqeOz1_GMgy02Ui-2" value="Охранник" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" vertex="1" parent="1">
+          <mxGeometry x="160" y="330" width="30" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="52YSkWqeOz1_GMgy02Ui-3" value="Открыть дверь с помощью кода доступа" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="320" y="240" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="52YSkWqeOz1_GMgy02Ui-5" value="Открыть дверь без помощи кода доступа, вызвав охранника" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="305" y="340" width="150" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="52YSkWqeOz1_GMgy02Ui-8" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="52YSkWqeOz1_GMgy02Ui-1" target="52YSkWqeOz1_GMgy02Ui-3">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="330" y="400" as="sourcePoint" />
+            <mxPoint x="380" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="52YSkWqeOz1_GMgy02Ui-9" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="52YSkWqeOz1_GMgy02Ui-1" target="52YSkWqeOz1_GMgy02Ui-5">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="224" as="sourcePoint" />
+            <mxPoint x="334" y="256" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="52YSkWqeOz1_GMgy02Ui-10" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="52YSkWqeOz1_GMgy02Ui-5" target="52YSkWqeOz1_GMgy02Ui-2">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="220" y="370" as="sourcePoint" />
+            <mxPoint x="349" y="356" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="52YSkWqeOz1_GMgy02Ui-11" value="Сменить код контроля" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="330" y="170" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="52YSkWqeOz1_GMgy02Ui-12" value="Сменить код доступа" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="330" y="90" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="52YSkWqeOz1_GMgy02Ui-13" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="52YSkWqeOz1_GMgy02Ui-1" target="52YSkWqeOz1_GMgy02Ui-11">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="225" as="sourcePoint" />
+            <mxPoint x="337" y="272" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="52YSkWqeOz1_GMgy02Ui-14" value="" style="endArrow=classic;html=1;rounded=0;" edge="1" parent="1" source="52YSkWqeOz1_GMgy02Ui-1" target="52YSkWqeOz1_GMgy02Ui-12">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="200" y="219" as="sourcePoint" />
+            <mxPoint x="341" y="209" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="52YSkWqeOz1_GMgy02Ui-15" value="Use" style="endArrow=open;endSize=12;dashed=1;html=1;rounded=0;" edge="1" parent="1" source="52YSkWqeOz1_GMgy02Ui-16" target="52YSkWqeOz1_GMgy02Ui-5">
+          <mxGeometry width="160" relative="1" as="geometry">
+            <mxPoint x="580" y="450" as="sourcePoint" />
+            <mxPoint x="540" y="310" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="52YSkWqeOz1_GMgy02Ui-16" value="Задать вопрос" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="470" y="440" width="70" height="40" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
