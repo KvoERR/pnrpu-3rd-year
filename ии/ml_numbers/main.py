@@ -127,8 +127,17 @@ def predict(image_path):
     tensor = tensor.unsqueeze(0).to(device)
 
     with torch.no_grad():
-        pred = model(tensor).argmax(1).item()
+        logits = model(tensor)
+        probs = torch.softmax(logits, dim=1)
+        pred = probs.argmax(1).item()
+        confidence = probs.max().item()
+
     print(f"Распознана цифра: {pred}")
+    print(f"Вероятность: {confidence:.2%}")
+    print("\nВероятности по классам:")
+    for digit, prob in enumerate(probs[0]):
+        bar = "█" * int(prob.item() * 30)
+        print(f"  {digit}: {prob.item():.4f} {bar}")
 
 
 if __name__ == "__main__":
