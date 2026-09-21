@@ -64,18 +64,14 @@ def make_lag_dataset(df, lags=(1, 2, 3, 5, 10, 22)):
 
 # ──────────────────────────── MLP model ────────────────────────────
 
-class CoffeePriceMLP(nn.Module):
-    """Полносвязная сеть для прогнозирования цены кофе."""
+class SimpleMLP(nn.Module):
+    """Простая полносвязная сеть для прогнозирования цены."""
 
     def __init__(self, input_dim=6):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(input_dim, 64),
+            nn.Linear(input_dim, 32),
             nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(64, 32),
-            nn.ReLU(),
-            nn.Dropout(0.1),
             nn.Linear(32, 1),
         )
 
@@ -116,16 +112,16 @@ def train_model(epochs=50, lr=0.001, batch_size=32, lags=(1, 2, 3, 5, 10, 22)):
     y = lag_df['price'].values.astype(np.float32)
 
     # 2. Разделение: 70% train, 15% val, 15% test
-    X_train_val, X_test, y_train_val, y_test, d_test = train_test_split(
+    X_train_val, X_test, y_train_val, y_test, dates_train_val, dates_test = train_test_split(
         X, y, lag_df['date'].values, test_size=0.15, random_state=42
     )
-    X_train, X_val, y_train, y_val = train_test_split(
-        X_train_val, y_train_val, test_size=0.176, random_state=42  # 0.176 * 0.85 ≈ 0.15
+    X_train, X_val, y_train, y_val, dates_train, dates_val = train_test_split(
+        X_train_val, y_train_val, dates_train_val, test_size=0.176, random_state=42  # 0.176 * 0.85 ≈ 0.15
     )
 
     print(f"\nTrain: {len(X_train)}, Val: {len(X_val)}, Test: {len(X_test)}")
 
-    # 3. Нормализация
+    # 3. Нормализация только признаков
     scaler_X = StandardScaler()
     scaler_y = StandardScaler()
 
@@ -159,14 +155,13 @@ def train_model(epochs=50, lr=0.001, batch_size=32, lags=(1, 2, 3, 5, 10, 22)):
     val_loader   = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
 
     # 5. Модель
-    model = CoffeePriceMLP(input_dim=len(feature_cols)).to(device)
+    model = SimpleMLP(input_dim=len(feature_cols)).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     criterion = nn.MSELoss()
 
     # 6. Обучение
     best_val_loss = float('inf')
     best_state = None
-    patience, early_stop_counter = 10, 0
 
     for epoch in range(epochs):
         # train
@@ -191,19 +186,13 @@ def train_model(epochs=50, lr=0.001, batch_size=32, lags=(1, 2, 3, 5, 10, 22)):
         avg_train = train_loss / len(train_loader)
         avg_val   = val_loss / len(val_loader)
 
-        if (epoch + 1) % 5 == 0 or epoch == 0:
+        if (epoch + 1) % 10 == 0 or epoch == 0:
             print(f"Epoch {epoch+1:3d}/{epochs} — Train loss: {avg_train:.6f}, Val loss: {avg_val:.6f}")
 
-        # early stopping
+        # сохраняем лучшую модель
         if avg_val < best_val_loss:
             best_val_loss = avg_val
             best_state = {k: v.clone() for k, v in model.state_dict().items()}
-            early_stop_counter = 0
-        else:
-            early_stop_counter += 1
-            if early_stop_counter >= patience:
-                print(f"\nEarly stop на epoch {epoch+1}")
-                break
 
     # Восстанавливаем лучшую модель
     model.load_state_dict(best_state)
@@ -235,7 +224,7 @@ def train_model(epochs=50, lr=0.001, batch_size=32, lags=(1, 2, 3, 5, 10, 22)):
         matplotlib.use('Agg')
         import matplotlib.pyplot as plt
 
-        dates_test = d_test[:len(X_test)]
+        dates_test = dates_test[:len(X_test)]
 
         fig, axes = plt.subplots(1, 2, figsize=(14, 5))
 
@@ -271,8 +260,8 @@ def train_model(epochs=50, lr=0.001, batch_size=32, lags=(1, 2, 3, 5, 10, 22)):
 
 # ──────────────────────────── predict ────────────────────────────
 
-def predict_from_file(path):
-    """Прогноз по CSV-файлу с лагами."""
+def predict(lag_values):
+    """Прогноз по значениям лагов цены."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     with open('norm_stats.json') as f:
@@ -281,47 +270,7 @@ def predict_from_file(path):
     feature_cols = stats['feature_cols']
     input_dim = len(feature_cols)
 
-    model = CoffeePriceMLP(input_dim=input_dim).to(device)
-    model.load_state_dict(torch.load('coffee_model.pth', weights_only=True, map_location=device))
-    model.eval()
-
-    scaler_X = StandardScaler()
-    scaler_X.mean_ = np.array(stats['scaler_X_mean'])
-    scaler_X.scale_ = np.array(stats['scaler_X_std'])
-    scaler_y = StandardScaler()
-    scaler_y.mean_ = np.array([stats['scaler_y_mean']])
-    scaler_y.scale_ = np.array([stats['scaler_y_std']])
-
-    df = pd.read_csv(path)
-    X = df[feature_cols].values.astype(np.float32)
-    X = scaler_X.transform(X)
-
-    with torch.no_grad():
-        X_t = torch.tensor(X).to(device)
-        y_pred_scaled = model(X_t).cpu().numpy().ravel()
-
-    y_pred = scaler_y.inverse_transform(y_pred_scaled.reshape(-1, 1)).ravel()
-
-    print(f"Предсказания ({len(y_pred)} строк):")
-    print(f"  {'№':>3} | {'Предсказанная цена':>18}")
-    print(f"  {'─'*3}┼{'─'*20}")
-    for i, p in enumerate(y_pred[:20], 1):
-        print(f"  {i:3d} | {p:18.2f}")
-    if len(y_pred) > 20:
-        print(f"  ... ещё {len(y_pred) - 20} строк")
-
-
-def predict_from_lags(*lag_values):
-    """Прогноз по 6 значениям лагов."""
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    with open('norm_stats.json') as f:
-        stats = json.load(f)
-
-    feature_cols = stats['feature_cols']
-    input_dim = len(feature_cols)
-
-    model = CoffeePriceMLP(input_dim=input_dim).to(device)
+    model = SimpleMLP(input_dim=input_dim).to(device)
     model.load_state_dict(torch.load('coffee_model.pth', weights_only=True, map_location=device))
     model.eval()
 
@@ -351,26 +300,19 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Использование:")
         print("  python main.py train [epochs]       — обучить модель")
-        print("  python main.py predict <file.csv>    — прогноз по CSV")
-        print("  python main.py predict-lag l1 l2 l3 l5 l10 l22  — прогноз по лагам")
+        print("  python main.py predict l1 l2 l3 l5 l10 l22  — прогноз по лагам")
         print()
         print("Примеры:")
         print("  python main.py train 100")
-        print("  python main.py predict coffee_lags.csv")
-        print("  python main.py predict-lag 246 251 252 251 241 244")
+        print("  python main.py predict 246 251 252 251 241 244")
     elif sys.argv[1] == 'train':
         epochs = int(sys.argv[2]) if len(sys.argv) > 2 else 50
         train_model(epochs=epochs)
     elif sys.argv[1] == 'predict':
-        if len(sys.argv) < 3:
-            print("Укажи файл: python main.py predict <file.csv>")
-        else:
-            predict_from_file(sys.argv[2])
-    elif sys.argv[1] == 'predict-lag':
         if len(sys.argv) < 8:
-            print("Укажи 6 лагов: python main.py predict-lag l1 l2 l3 l5 l10 l22")
+            print("Укажи 6 лагов: python main.py predict l1 l2 l3 l5 l10 l22")
         else:
             lags = [float(x) for x in sys.argv[2:8]]
-            predict_from_lags(*lags)
+            predict(lags)
     else:
         print(f"Неизвестная команда: {sys.argv[1]}")
