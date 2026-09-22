@@ -17,6 +17,7 @@ namespace DrawERR.ViewModels
     public class MainViewModel : INotifyPropertyChanged
     {
         private readonly ObservableCollection<ShapeViewModel> _shapes;
+        private readonly ObservableCollection<ShapeViewModel> _selectedShapes;
         private ShapeViewModel _selectedShape;
         private ShapeType _selectedShapeType;
         private static readonly Random _random = new Random();
@@ -24,24 +25,26 @@ namespace DrawERR.ViewModels
         public MainViewModel()
         {
             _shapes = new ObservableCollection<ShapeViewModel>();
+            _selectedShapes = new ObservableCollection<ShapeViewModel>();
             _selectedShapeType = ShapeType.Point;
 
             // Команды
             AddShapeCommand = new RelayCommand(AddShape);
-            DeleteShapeCommand = new RelayCommand(DeleteShape, param => SelectedShape != null);
+            DeleteShapeCommand = new RelayCommand(DeleteShape, param => _selectedShapes.Count > 0);
             SaveCommand = new RelayCommand(Save);
             LoadCommand = new RelayCommand(Load);
             ClearCommand = new RelayCommand(Clear);
+            ToggleSelectionCommand = new RelayCommand<ShapeViewModel>(ToggleShapeSelection);
 
             // Трансформации
-            MoveLeftCommand = new RelayCommand(MoveLeft, param => SelectedShape != null);
-            MoveRightCommand = new RelayCommand(MoveRight, param => SelectedShape != null);
-            MoveUpCommand = new RelayCommand(MoveUp, param => SelectedShape != null);
-            MoveDownCommand = new RelayCommand(MoveDown, param => SelectedShape != null);
-            RotateLeftCommand = new RelayCommand(RotateLeft, param => SelectedShape != null);
-            RotateRightCommand = new RelayCommand(RotateRight, param => SelectedShape != null);
-            ScaleUpCommand = new RelayCommand(ScaleUp, param => SelectedShape != null);
-            ScaleDownCommand = new RelayCommand(ScaleDown, param => SelectedShape != null);
+            MoveLeftCommand = new RelayCommand(MoveLeft, param => _selectedShapes.Count > 0);
+            MoveRightCommand = new RelayCommand(MoveRight, param => _selectedShapes.Count > 0);
+            MoveUpCommand = new RelayCommand(MoveUp, param => _selectedShapes.Count > 0);
+            MoveDownCommand = new RelayCommand(MoveDown, param => _selectedShapes.Count > 0);
+            RotateLeftCommand = new RelayCommand(RotateLeft, param => _selectedShapes.Count > 0);
+            RotateRightCommand = new RelayCommand(RotateRight, param => _selectedShapes.Count > 0);
+            ScaleUpCommand = new RelayCommand(ScaleUp, param => _selectedShapes.Count > 0);
+            ScaleDownCommand = new RelayCommand(ScaleDown, param => _selectedShapes.Count > 0);
             DeselectAllCommand = new RelayCommand(DeselectAll);
         }
 
@@ -65,25 +68,20 @@ namespace DrawERR.ViewModels
             {
                 if (_selectedShape != value)
                 {
-                    if (_selectedShape != null)
-                        _selectedShape.IsSelected = false;
-
                     _selectedShape = value;
-
-                    if (_selectedShape != null)
-                        _selectedShape.IsSelected = true;
-
                     OnPropertyChanged();
                 }
             }
         }
 
-        // Команды
+        public ObservableCollection<ShapeViewModel> SelectedShapes => _selectedShapes;
+
         public ICommand AddShapeCommand { get; }
         public ICommand DeleteShapeCommand { get; }
         public ICommand SaveCommand { get; }
         public ICommand LoadCommand { get; }
         public ICommand ClearCommand { get; }
+        public ICommand ToggleSelectionCommand { get; }
 
         public ICommand MoveLeftCommand { get; }
         public ICommand MoveRightCommand { get; }
@@ -121,83 +119,101 @@ namespace DrawERR.ViewModels
             var viewModel = new ShapeViewModel(shape);
             viewModel.MainViewModel = this;
             _shapes.Add(viewModel);
+            _selectedShapes.Add(viewModel);
+            viewModel.IsSelected = true;
             SelectedShape = viewModel;
         }
 
         // ========== ТРАНСФОРМАЦИИ ==========
         private void MoveLeft(object parameter)
         {
-            if (SelectedShape != null)
-                SelectedShape.X -= 10;
+            foreach (var shape in _selectedShapes)
+                shape.X -= 10;
         }
 
         private void MoveRight(object parameter)
         {
-            if (SelectedShape != null)
-                SelectedShape.X += 10;
+            foreach (var shape in _selectedShapes)
+                shape.X += 10;
         }
 
         private void MoveUp(object parameter)
         {
-            if (SelectedShape != null)
-                SelectedShape.Y -= 10;
+            foreach (var shape in _selectedShapes)
+                shape.Y -= 10;
         }
 
         private void MoveDown(object parameter)
         {
-            if (SelectedShape != null)
-                SelectedShape.Y += 10;
+            foreach (var shape in _selectedShapes)
+                shape.Y += 10;
         }
 
         private void RotateLeft(object parameter)
         {
-            if (SelectedShape != null)
+            foreach (var shape in _selectedShapes)
             {
-                SelectedShape.Shape.Rotate(-15);
-                SelectedShape.NotifyTransformChanged();
+                shape.Shape.Rotate(-15);
+                shape.NotifyTransformChanged();
             }
         }
 
         private void RotateRight(object parameter)
         {
-            if (SelectedShape != null)
+            foreach (var shape in _selectedShapes)
             {
-                SelectedShape.Shape.Rotate(15);
-                SelectedShape.NotifyTransformChanged();
+                shape.Shape.Rotate(15);
+                shape.NotifyTransformChanged();
             }
         }
 
         private void ScaleUp(object parameter)
         {
-            if (SelectedShape != null)
+            foreach (var shape in _selectedShapes)
             {
-                SelectedShape.Shape.Scale(1.2);
-                SelectedShape.NotifyTransformChanged();
+                shape.Shape.Scale(1.2);
+                shape.NotifyTransformChanged();
             }
         }
 
         private void ScaleDown(object parameter)
         {
-            if (SelectedShape != null)
+            foreach (var shape in _selectedShapes)
             {
-                SelectedShape.Shape.Scale(0.8);
-                SelectedShape.NotifyTransformChanged();
+                shape.Shape.Scale(0.8);
+                shape.NotifyTransformChanged();
             }
         }
 
         private void DeselectAll(object parameter)
         {
+            foreach (var shape in _selectedShapes)
+                shape.IsSelected = false;
+            _selectedShapes.Clear();
             SelectedShape = null;
+        }
+
+        public void ToggleShapeSelection(ShapeViewModel shape)
+        {
+            if (shape == null) return;
+
+            if (_selectedShapes.Contains(shape))
+                _selectedShapes.Remove(shape);
+            else
+                _selectedShapes.Add(shape);
+
+            shape.IsSelected = _selectedShapes.Contains(shape);
+            SelectedShape = _selectedShapes.Count > 0 ? _selectedShapes.Last() : null;
         }
 
         // ========== ОСТАЛЬНЫЕ МЕТОДЫ ==========
         private void DeleteShape(object parameter)
         {
-            if (SelectedShape != null)
-            {
-                _shapes.Remove(SelectedShape);
-                SelectedShape = null;
-            }
+            var toRemove = _selectedShapes.ToList();
+            foreach (var shape in toRemove)
+                _shapes.Remove(shape);
+            _selectedShapes.Clear();
+            SelectedShape = null;
         }
 
         private void Save(object parameter)
@@ -262,6 +278,9 @@ namespace DrawERR.ViewModels
         private void Clear(object parameter)
         {
             _shapes.Clear();
+            foreach (var shape in _selectedShapes.ToList())
+                shape.IsSelected = false;
+            _selectedShapes.Clear();
             SelectedShape = null;
         }
 

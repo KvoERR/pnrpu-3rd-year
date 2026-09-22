@@ -85,70 +85,44 @@ namespace DrawERR.Models
             TransformMatrix = matrix;
         }
 
-        // Поворот вокруг центра
+        // Поворот вокруг глобального центра
         public void Rotate(double angleDegrees)
         {
-            var angle = angleDegrees * Math.PI / 180;
-            var localCenter = GetLocalCenter();
+            var center = GetCenter(); // глобальный центр
 
             var matrix = TransformMatrix;
-            double currentAngle = Math.Atan2(matrix.M12, matrix.M11);
-            double currentScale = Math.Sqrt(matrix.M11 * matrix.M11 + matrix.M12 * matrix.M12);
-            double newAngle = currentAngle + angle;
+            var t1 = new Matrix();
+            t1.Translate(-center.X, -center.Y);
+            var r = new Matrix();
+            r.Rotate(angleDegrees);
+            var t2 = new Matrix();
+            t2.Translate(center.X, center.Y);
 
-            var result = new Matrix();
-            result.OffsetX = matrix.OffsetX;
-            result.OffsetY = matrix.OffsetY;
-            result.M11 = Math.Cos(newAngle) * currentScale;
-            result.M12 = Math.Sin(newAngle) * currentScale;
-            result.M21 = -Math.Sin(newAngle) * currentScale;
-            result.M22 = Math.Cos(newAngle) * currentScale;
+            matrix = Matrix.Multiply(matrix, t1);
+            matrix = Matrix.Multiply(matrix, r);
+            matrix = Matrix.Multiply(matrix, t2);
 
-            var rotScale = new Matrix(result.M11, result.M12, result.M21, result.M22, 0, 0);
-            rotScale.Translate(-localCenter.X, -localCenter.Y);
-            rotScale.Translate(localCenter.X, localCenter.Y);
-            result = Matrix.Multiply(result, rotScale);
-
-            TransformMatrix = result;
+            TransformMatrix = matrix;
         }
 
-        // Масштабирование от центра
+        // Масштабирование от глобального центра
         public void Scale(double scale)
         {
-            var localCenter = GetLocalCenter();
+            var center = GetCenter(); // глобальный центр
 
             var matrix = TransformMatrix;
-            double currentAngle = Math.Atan2(matrix.M12, matrix.M11);
-            double currentScale = Math.Sqrt(matrix.M11 * matrix.M11 + matrix.M12 * matrix.M12);
-            double newScale = currentScale * scale;
+            var t1 = new Matrix();
+            t1.Translate(-center.X, -center.Y);
+            var s = new Matrix();
+            s.Scale(scale, scale);
+            var t2 = new Matrix();
+            t2.Translate(center.X, center.Y);
 
-            var result = new Matrix();
-            result.OffsetX = matrix.OffsetX;
-            result.OffsetY = matrix.OffsetY;
-            result.M11 = Math.Cos(currentAngle) * newScale;
-            result.M12 = Math.Sin(currentAngle) * newScale;
-            result.M21 = -Math.Sin(currentAngle) * newScale;
-            result.M22 = Math.Cos(currentAngle) * newScale;
+            matrix = Matrix.Multiply(matrix, t1);
+            matrix = Matrix.Multiply(matrix, s);
+            matrix = Matrix.Multiply(matrix, t2);
 
-            var rotScale = new Matrix(result.M11, result.M12, result.M21, result.M22, 0, 0);
-            rotScale.Translate(-localCenter.X, -localCenter.Y);
-            rotScale.Translate(localCenter.X, localCenter.Y);
-            result = Matrix.Multiply(result, rotScale);
-
-            TransformMatrix = result;
-        }
-
-        // Получение центра в локальных координатах
-        private Point GetLocalCenter()
-        {
-            if (Points == null || Points.Length == 0) return new Point(0, 0);
-            double cx = 0, cy = 0;
-            foreach (var p in Points)
-            {
-                cx += p.X;
-                cy += p.Y;
-            }
-            return new Point(cx / Points.Length, cy / Points.Length);
+            TransformMatrix = matrix;
         }
 
         // Получение центра фигуры

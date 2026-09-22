@@ -201,6 +201,8 @@ namespace DrawERR.ViewModels
             OnPropertyChanged(nameof(ClosedPoints));
             OnPropertyChanged(nameof(Bounds));
             OnPropertyChanged(nameof(DisplayName));
+            OnPropertyChanged(nameof(RotationAngle));
+            OnPropertyChanged(nameof(ScaleFactor));
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
