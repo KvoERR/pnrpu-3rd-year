@@ -3,11 +3,9 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 import json
 import sys
-from pathlib import Path
 
 
 # ──────────────────────────── helpers ────────────────────────────
@@ -31,35 +29,30 @@ def parse_number(x):
         return np.nan
 
 
-def load_coffee(path):
-    """Загружает CSV и парсит числа/даты."""
+def load_csv(path):
+    """Загружает CSV, возвращает (dates, prices)."""
     df = pd.read_csv(path, sep=',', encoding='utf-8-sig')
-    df.columns = ['date', 'price', 'open', 'high', 'low', 'volume', 'change_pct']
-
-    for col in ['price', 'open', 'high', 'low', 'volume', 'change_pct']:
-        df[col] = df[col].apply(parse_number)
-
-    df['date'] = pd.to_datetime(df['date'], format='%d.%m.%Y')
-    df = df.sort_values('date').reset_index(drop=True)
-    return df
+    prices = [parse_number(x) for x in df.iloc[:, 1].tolist()]
+    dates = pd.to_datetime(df.iloc[:, 0], format='%d.%m.%Y').tolist()
+    return dates, prices
 
 
-def make_lag_dataset(df, lags=(1, 2, 3, 5, 10, 22)):
+def make_lags(prices, lags=(1, 2, 3, 5, 10, 22)):
     """
-    Для каждой даты собирает лаги цены и саму цену (target).
-    
-    Возвращает DataFrame:
-        date | price | lag_1 | lag_2 | ... | lag_N
+    Из списка цен создаёт два списка:
+      - lag_list: [[lag1, lag2, ...], [...], ...]
+      - price_list: [price, price, ...]
     """
-    out = pd.DataFrame()
-    out['date']  = df['date']
-    out['price'] = df['price']            # target
+    max_lag = max(lags)
+    lag_list = []
+    price_list = []
 
-    for lag in lags:
-        out[f'lag_{lag}'] = df['price'].shift(lag)
+    for i in range(max_lag, len(prices)):
+        lag_row = [prices[i - lag] for lag in lags]
+        lag_list.append(lag_row)
+        price_list.append(prices[i])
 
-    out = out.dropna().reset_index(drop=True)
-    return out
+    return lag_list, price_list
 
 
 # ──────────────────────────── MLP model ────────────────────────────
@@ -79,58 +72,25 @@ class SimpleMLP(nn.Module):
         return self.net(x)
 
 
-# ──────────────────────────── metrics ────────────────────────────
-
-def mae(y_true, y_pred):
-    return np.mean(np.abs(y_true - y_pred))
-
-
-def rmse(y_true, y_pred):
-    return np.sqrt(np.mean((y_true - y_pred) ** 2))
-
-
-def mape(y_true, y_pred):
-    mask = y_true != 0
-    return np.mean(np.abs((y_true[mask] - y_pred[mask]) / y_true[mask])) * 100
-
-
 # ──────────────────────────── train ────────────────────────────
 
 def train_model(epochs=50, lr=0.001, batch_size=32, lags=(1, 2, 3, 5, 10, 22)):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Device: {device}")
 
     # 1. Загрузка данных
-    df = load_coffee('data.csv')
-    print(f"Загружено: {len(df)} строк, период: {df['date'].min().date()} — {df['date'].max().date()}")
-
-    lag_df = make_lag_dataset(df, lags=lags)
-    print(f"Датасет с лагами: {len(lag_df)} строк")
+    dates, prices = load_csv('data.csv')
+    lag_list, price_list = make_lags(prices, lags=lags)
 
     feature_cols = [f'lag_{l}' for l in lags]
-    X = lag_df[feature_cols].values.astype(np.float32)
-    y = lag_df['price'].values.astype(np.float32)
+    X = np.array(lag_list, dtype=np.float32)
+    y = np.array(price_list, dtype=np.float32)
 
-    # 2. Разделение: 70% train, 15% val, 15% test
-    X_train_val, X_test, y_train_val, y_test, dates_train_val, dates_test = train_test_split(
-        X, y, lag_df['date'].values, test_size=0.15, random_state=42
-    )
-    X_train, X_val, y_train, y_val, dates_train, dates_val = train_test_split(
-        X_train_val, y_train_val, dates_train_val, test_size=0.176, random_state=42  # 0.176 * 0.85 ≈ 0.15
-    )
-
-    print(f"\nTrain: {len(X_train)}, Val: {len(X_val)}, Test: {len(X_test)}")
-
-    # 3. Нормализация только признаков
+    # 2. Нормализация
     scaler_X = StandardScaler()
     scaler_y = StandardScaler()
 
-    X_train = scaler_X.fit_transform(X_train)
-    X_val   = scaler_X.transform(X_val)
-    X_test  = scaler_X.transform(X_test)
-
-    y_train = scaler_y.fit_transform(y_train.reshape(-1, 1)).ravel()
-    y_val   = scaler_y.transform(y_val.reshape(-1, 1)).ravel()
+    X = scaler_X.fit_transform(X)
+    y = scaler_y.fit_transform(y.reshape(-1, 1)).ravel()
 
     # Сохраняем статистику
     stats = {
@@ -142,118 +102,40 @@ def train_model(epochs=50, lr=0.001, batch_size=32, lags=(1, 2, 3, 5, 10, 22)):
     }
     with open('norm_stats.json', 'w') as f:
         json.dump(stats, f, indent=2)
-    print("norm_stats.json сохранён")
 
-    # 4. DataLoader
+    # 3. DataLoader
     train_ds = TensorDataset(
-        torch.tensor(X_train), torch.tensor(y_train)
-    )
-    val_ds = TensorDataset(
-        torch.tensor(X_val), torch.tensor(y_val)
+        torch.tensor(X), torch.tensor(y)
     )
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True)
-    val_loader   = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
 
-    # 5. Модель
+    # 4. Модель
     model = SimpleMLP(input_dim=len(feature_cols)).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
     criterion = nn.MSELoss()
 
-    # 6. Обучение
-    best_val_loss = float('inf')
+    # 5. Обучение
+    best_loss = float('inf')
     best_state = None
 
     for epoch in range(epochs):
-        # train
         model.train()
-        train_loss = 0
+        epoch_loss = 0
         for xb, yb in train_loader:
             xb, yb = xb.to(device), yb.to(device)
             optimizer.zero_grad()
             loss = criterion(model(xb), yb)
             loss.backward()
             optimizer.step()
-            train_loss += loss.item()
+            epoch_loss += loss.item()
 
-        # val
-        model.eval()
-        val_loss = 0
-        with torch.no_grad():
-            for xb, yb in val_loader:
-                xb, yb = xb.to(device), yb.to(device)
-                val_loss += criterion(model(xb), yb).item()
-
-        avg_train = train_loss / len(train_loader)
-        avg_val   = val_loss / len(val_loader)
-
-        if (epoch + 1) % 10 == 0 or epoch == 0:
-            print(f"Epoch {epoch+1:3d}/{epochs} — Train loss: {avg_train:.6f}, Val loss: {avg_val:.6f}")
-
-        # сохраняем лучшую модель
-        if avg_val < best_val_loss:
-            best_val_loss = avg_val
+        avg_loss = epoch_loss / len(train_loader)
+        if avg_loss < best_loss:
+            best_loss = avg_loss
             best_state = {k: v.clone() for k, v in model.state_dict().items()}
 
-    # Восстанавливаем лучшую модель
     model.load_state_dict(best_state)
-
-    # 7. Сохранение
     torch.save(model.state_dict(), 'coffee_model.pth')
-    print("coffee_model.pth сохранён")
-
-    # 8. Оценка на test set
-    X_test_t = torch.tensor(X_test).to(device)
-    y_test_t = torch.tensor(y_test).to(device)
-
-    model.eval()
-    with torch.no_grad():
-        y_pred_scaled = model(X_test_t).cpu().numpy().ravel()
-
-    # Обратная нормализация
-    y_pred = scaler_y.inverse_transform(y_pred_scaled.reshape(-1, 1)).ravel()
-    y_test_orig = scaler_y.inverse_transform(y_test.reshape(-1, 1)).ravel()
-
-    print(f"\n=== Метрики на Test set ({len(X_test)} строк) ===")
-    print(f"  MAE:  {mae(y_test_orig, y_pred):.2f}")
-    print(f"  RMSE: {rmse(y_test_orig, y_pred):.2f}")
-    print(f"  MAPE: {mape(y_test_orig, y_pred):.2f}%")
-
-    # 9. Визуализация
-    try:
-        import matplotlib
-        matplotlib.use('Agg')
-        import matplotlib.pyplot as plt
-
-        dates_test = dates_test[:len(X_test)]
-
-        fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-
-        # График предсказаний
-        ax = axes[0]
-        ax.plot(range(len(y_test_orig)), y_test_orig, label='Реальная цена', color='blue', linewidth=1.5)
-        ax.plot(range(len(y_pred)), y_pred, label='Предсказание', color='red', linewidth=1.5, alpha=0.7)
-        ax.set_title('Реальная vs предсказанная цена', fontsize=13)
-        ax.set_xlabel('Строка в test-сете')
-        ax.set_ylabel('Цена')
-        ax.legend()
-        ax.grid(True, alpha=0.3)
-
-        # Распределение ошибок
-        ax = axes[1]
-        errors = y_test_orig - y_pred
-        ax.hist(errors, bins=40, color='steelblue', edgecolor='black', alpha=0.8)
-        ax.set_title('Распределение ошибок', fontsize=13)
-        ax.set_xlabel('Ошибка (реальная − предсказанная)')
-        ax.set_ylabel('Количество')
-        ax.axvline(x=0, color='red', linestyle='--', linewidth=1.5)
-        ax.grid(True, alpha=0.3)
-
-        plt.tight_layout()
-        plt.savefig('prediction_plot.png', dpi=150)
-        print("prediction_plot.png сохранён")
-        plt.close()
-    except ImportError:
-        print("\nmatplotlib не установлен — график не строим")
 
     return model, stats
 
@@ -297,14 +179,17 @@ def predict(lag_values):
 # ──────────────────────────── CLI ────────────────────────────
 
 if __name__ == "__main__":
+    print(make_lags())
     if len(sys.argv) < 2:
         print("Использование:")
         print("  python main.py train [epochs]       — обучить модель")
         print("  python main.py predict l1 l2 l3 l5 l10 l22  — прогноз по лагам")
+        print("  python main.py get_lags             — показать текущие лаги")
         print()
         print("Примеры:")
         print("  python main.py train 100")
         print("  python main.py predict 246 251 252 251 241 244")
+        print("  python main.py get_lags")
     elif sys.argv[1] == 'train':
         epochs = int(sys.argv[2]) if len(sys.argv) > 2 else 50
         train_model(epochs=epochs)
@@ -314,5 +199,8 @@ if __name__ == "__main__":
         else:
             lags = [float(x) for x in sys.argv[2:8]]
             predict(lags)
+    elif sys.argv[1] == 'get_lags':
+        lags,prices = make_lags()
+        print(f"Текущие лаги: {lags}")
     else:
         print(f"Неизвестная команда: {sys.argv[1]}")
