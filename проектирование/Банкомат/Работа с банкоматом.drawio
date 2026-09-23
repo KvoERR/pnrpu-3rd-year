@@ -1,6 +1,6 @@
 <mxfile host="Electron">
   <diagram name="Страница-1" id="BIQt_p3RkRMYtFTkSQI9">
-    <mxGraphModel dx="758" dy="673" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="909" dy="807" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -13,7 +13,7 @@
         <mxCell id="JvB7LbIPh-1C7zasKmod-3" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Узнать остаток по счету" vertex="1">
           <mxGeometry height="50" width="80" x="400" y="85" as="geometry" />
         </mxCell>
-        <mxCell id="JvB7LbIPh-1C7zasKmod-6" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Работать с банкоматом???" vertex="1">
+        <mxCell id="JvB7LbIPh-1C7zasKmod-6" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Поместить кредитную карту в банкомат" vertex="1">
           <mxGeometry height="70" width="90" x="160" y="135" as="geometry" />
         </mxCell>
         <mxCell id="JvB7LbIPh-1C7zasKmod-7" edge="1" parent="1" source="JvB7LbIPh-1C7zasKmod-1" style="endArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="JvB7LbIPh-1C7zasKmod-6" value="">
@@ -67,8 +67,8 @@
         <mxCell id="JvB7LbIPh-1C7zasKmod-18" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Загрузить деньги" vertex="1">
           <mxGeometry height="50" width="80" x="165" y="295" as="geometry" />
         </mxCell>
-        <mxCell id="YEUUUizz34ISwGdQR_iX-2" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Карты" vertex="1">
-          <mxGeometry height="50" width="80" x="170" y="390" as="geometry" />
+        <mxCell id="YEUUUizz34ISwGdQR_iX-2" parent="1" style="ellipse;whiteSpace=wrap;html=1;" value="Забрать конфискованные кредитные карты" vertex="1">
+          <mxGeometry height="70" width="112" x="160" y="380" as="geometry" />
         </mxCell>
         <mxCell id="YEUUUizz34ISwGdQR_iX-3" edge="1" parent="1" source="JvB7LbIPh-1C7zasKmod-17" style="endArrow=none;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="JvB7LbIPh-1C7zasKmod-18" value="">
           <mxGeometry height="50" relative="1" width="50" as="geometry">
