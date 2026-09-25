@@ -18,6 +18,9 @@ ENV/
 *.ova
 *.qcow2
 
+# ALU
+.kom
+
 # Build artifacts
 obj/
 bin/
