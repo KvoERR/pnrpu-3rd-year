@@ -65,114 +65,77 @@ def extended_gcd(a, b):
     return gcd, x, y
 
 
-def mod_inverse(e, phi):
-    """Находит обратное число d: e*d ≡ 1 (mod phi)."""
-    gcd, x, _ = extended_gcd(e % phi, phi)
-    if gcd != 1:
-        raise CipherError("Обратное число не существует (e и phi не взаимно просты)")
-    return x % phi
-
-
-def generate_keys(p, q):
+def generate_keys(p, q): #1
     """Генерация ключей RSA по шагам 1–6 описания.
     Возвращает (e, n, d).
     """
-    n = p * q
+    n = p * q #2
     phi = (p - 1) * (q - 1)
 
-    e = 65537
-    if math.gcd(e, phi) != 1:
-        # Если 65537 не подошёл, ищем другой
-        for candidate in range(3, min(n, phi), 2):
-            if math.gcd(candidate, phi) == 1:
-                e = candidate
-                break
+    # 3
+    for candidate in range(3, min(n, phi), 2):
+        if math.gcd(candidate, phi) == 1:
+            e = candidate
+            break
 
     if e is None:
         raise CipherError("Не удалось подобрать e")
 
     # Шаг 4: находим d через уравнение e*d + (p-1)(q-1)*y = 1
-    d = mod_inverse(e, phi)
+    gcd, d, _ = extended_gcd(e % phi, phi)
+    if gcd != 1:
+        raise CipherError("Обратное число не существует (e и phi не взаимно просты)")
+    d = d % phi
 
     return e, n, d
 
 
-def _text_to_bytes_blocks(text, n):
-    """Разбивает текст на блоки чисел, каждый < n.
-    k = floor(log2(n)) бит на блок.
-    """
-    if n <= 1:
-        raise CipherError("n должно быть > 1")
+def _text_to_blocks(text, n):
+    """Текст -> (blocks, k). Блок = k = floor(log2 n) бит (как в задании)."""
+    k = n.bit_length() - 1
+    if k < 8:
+        raise CipherError(f"n={n} слишком мало (k={k} бит, нужно ≥8)")
 
-    k = n.bit_length() - 1  # floor(log2(n))
-    block_size = max(1, k // 8)
+    bits = ''.join(f'{b:08b}' for b in text.encode('utf-8'))
+    total_bits = len(bits)
+    bits += '0' * ((-total_bits) % k)          # паддинг до кратного k
 
-    text_bytes = text.encode('utf-8')
-    blocks = []
+    blocks = [int(bits[i:i+k], 2) for i in range(0, len(bits), k)]
+    return blocks, k, total_bits
 
-    for i in range(0, len(text_bytes), block_size):
-        chunk = text_bytes[i:i + block_size]
-        block_int = int.from_bytes(chunk, 'big')
 
-        # Если блок >= n, уменьшаем размер блока
-        while block_int >= n and len(chunk) > 1:
-            chunk = chunk[:-1]
-            block_int = int.from_bytes(chunk, 'big')
-
-        if block_int >= n:
-            raise CipherError(
-                f"Значение блока {block_int} >= n={n}. "
-                f"Увеличьте p и q (нужно n > {block_int})."
-            )
-
-        blocks.append(block_int)
-
-    return blocks
-
-def _blocks_to_text(blocks):
-    """Собирает блоки обратно в текст."""
-    all_bytes = b''
-    for block in blocks:
-        if block == 0:
-            all_bytes += b'\x00'
-            continue
-        # Определяем количество байт
-        byte_len = (block.bit_length() + 7) // 8
-        all_bytes += block.to_bytes(byte_len, 'big')
-
-    # Удаляем нулевые байти-заполнители (если текст не начинался с \x00)
+def _blocks_to_text(blocks, k, total_bits):
+    """Блоки -> текст."""
+    bits = ''.join(format(m, f'0{k}b') for m in blocks)[:total_bits]
+    bits += '0' * ((-len(bits)) % 8)
+    data = bytes(int(bits[i:i+8], 2) for i in range(0, len(bits), 8))
     try:
-        text = all_bytes.decode('utf-8')
-        # Убираем trailing nulls и whitespace padding
-        text = text.rstrip('\x00').rstrip()
-        return text
+        return data.decode('utf-8')
     except UnicodeDecodeError:
         raise CipherError("Не удалось декодировать результат")
 
 
-def encrypt(text, e, n):
-    """Шифрование: c_i = pow(m_i, e, n) для каждого блока."""
+def encrypt(text, p, q):
     if not isinstance(text, str):
         raise TypeError("text должен быть строкой")
     if text == '':
         raise CipherError("text не может быть пустым")
 
-    blocks = _text_to_bytes_blocks(text, n)
+    e, n, d = generate_keys(p, q)
+    blocks, k, total_bits = _text_to_blocks(text, n)
     ciphertext = [pow(m, e, n) for m in blocks]
-    return ciphertext
+    return ciphertext, k, total_bits, e, n, d
 
 
-def decrypt(ciphertext, d, n):
-    """Расшифровка: m_i = pow(c_i, d, n) для каждого блока."""
+def decrypt(ciphertext, k, total_bits, d, n):
     if not isinstance(ciphertext, (list, str)):
         raise TypeError("ciphertext должен быть списком чисел или строкой")
     if not ciphertext:
         raise CipherError("ciphertext не может быть пустым")
 
-    # Если строка — парсим числа
     if isinstance(ciphertext, str):
         ciphertext = [int(x.strip()) for x in ciphertext.split(',') if x.strip()]
 
     plaintext_blocks = [pow(c, d, n) for c in ciphertext]
-    return _blocks_to_text(plaintext_blocks)
+    return _blocks_to_text(plaintext_blocks, k, total_bits)
 

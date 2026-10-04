@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
-from main import CipherError, generate_keys, encrypt, decrypt, generate_prime, is_prime_miller_rabin
+from main import CipherError, encrypt, decrypt, generate_prime, is_prime_miller_rabin
 
 
 class CipherApp:
@@ -10,6 +10,10 @@ class CipherApp:
         self.root.title("RSA Шифратор")
         self.root.geometry("600x600")
         self.root.resizable(False, False)
+
+        # Параметры последнего шифрования (нужны для дешифровки)
+        self.last_k = None
+        self.last_total_bits = None
 
         # --- Вкладки ---
         notebook = ttk.Notebook(root)
@@ -39,7 +43,7 @@ class CipherApp:
         self.q_entry.pack(side="left", padx=5)
 
         self.generate_btn = ttk.Button(
-            enc_frame, text="🔑 Генерировать p и q", command=self.generate_primes
+            enc_frame, text="Генерировать p и q", command=self.generate_primes
         )
         self.generate_btn.pack(pady=5)
 
@@ -85,13 +89,13 @@ class CipherApp:
         self.info_label.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="w")
 
     def generate_primes(self):
-        """Генерирует простые числа p и q разрядностью ≥ 16 бит."""
+        """Генерирует простые числа p и q разрядностью ≥ 20 бит."""
         try:
             self.info_label.config(text="Генерация...", foreground="blue")
             self.root.update()
 
-            p = generate_prime(16)
-            q = generate_prime(16)
+            p = generate_prime(20)
+            q = generate_prime(20)
 
             self.p_entry.delete(0, "end")
             self.p_entry.insert(0, str(p))
@@ -146,7 +150,7 @@ class CipherApp:
 
     def do_encrypt(self):
         try:
-            text = self.enc_text.get("1.0", "end-1c").strip()
+            text = self.enc_text.get("1.0", "end-1c")
             if not text:
                 raise CipherError("Введите текст")
 
@@ -162,21 +166,28 @@ class CipherApp:
         if not is_prime_miller_rabin(q):
             messagebox.showerror("Ошибка", f"q={q} — не простое число")
             return
-        if p.bit_length() < 16:
-            messagebox.showerror("Ошибка", f"p={p} — разрядность {p.bit_length()} бит, нужно ≥ 16")
+        if p.bit_length() < 20:
+            messagebox.showerror("Ошибка", f"p={p} — разрядность {p.bit_length()} бит, нужно ≥ 20")
             return
-        if q.bit_length() < 16:
-            messagebox.showerror("Ошибка", f"q={q} — разрядность {q.bit_length()} бит, нужно ≥ 16")
+        if q.bit_length() < 20:
+            messagebox.showerror("Ошибка", f"q={q} — разрядность {q.bit_length()} бит, нужно ≥ 20")
             return
 
         try:
             self.info_label.config(text="Шифрование...", foreground="blue")
             self.root.update()
 
-            e, n, d = generate_keys(p, q)
-            ciphertext = encrypt(text, e, n)
+            ciphertext, k, total_bits, e, n, d = encrypt(text, p, q)
+            self.last_k = k
+            self.last_total_bits = total_bits
+
+            self.d_entry.delete(0, "end")
+            self.d_entry.insert(0, str(d))
+            self.n_entry.delete(0, "end")
+            self.n_entry.insert(0, str(n))
 
             result = (
+                f"k={k} бит, total_bits={total_bits}\n"
                 f"Ключи: e={e}, n={n}, d={d}\n\n"
                 f"Зашифрованный текст:\n"
                 f"{', '.join(str(c) for c in ciphertext)}"
@@ -203,11 +214,18 @@ class CipherApp:
             messagebox.showerror("Ошибка", "d и n должны быть положительными числами")
             return
 
+        if self.last_k is None or self.last_total_bits is None:
+            messagebox.showerror(
+                "Ошибка",
+                "Нет параметров k и total_bits. Сначала зашифруйте текст на вкладке «Шифровка»."
+            )
+            return
+
         try:
             self.info_label.config(text="Расшифровка...", foreground="blue")
             self.root.update()
 
-            plaintext = decrypt(ciphertext_str, d, n)
+            plaintext = decrypt(ciphertext_str, self.last_k, self.last_total_bits, d, n)
 
             result = f"Расшифрованный текст:\n{plaintext}"
             self._show_result(result, self.dec_result)
