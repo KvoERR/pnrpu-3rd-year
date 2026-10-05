@@ -94,8 +94,8 @@ class CipherApp:
             self.info_label.config(text="Генерация...", foreground="blue")
             self.root.update()
 
-            p = generate_prime(20)
-            q = generate_prime(20)
+            p = generate_prime(16)
+            q = generate_prime(16)
 
             self.p_entry.delete(0, "end")
             self.p_entry.insert(0, str(p))
@@ -166,11 +166,11 @@ class CipherApp:
         if not is_prime_miller_rabin(q):
             messagebox.showerror("Ошибка", f"q={q} — не простое число")
             return
-        if p.bit_length() < 20:
-            messagebox.showerror("Ошибка", f"p={p} — разрядность {p.bit_length()} бит, нужно ≥ 20")
+        if p.bit_length() < 16:
+            messagebox.showerror("Ошибка", f"p={p} — разрядность {p.bit_length()} бит, нужно ≥ 16")
             return
-        if q.bit_length() < 20:
-            messagebox.showerror("Ошибка", f"q={q} — разрядность {q.bit_length()} бит, нужно ≥ 20")
+        if q.bit_length() < 16:
+            messagebox.showerror("Ошибка", f"q={q} — разрядность {q.bit_length()} бит, нужно ≥ 16")
             return
 
         try:
