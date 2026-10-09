@@ -48,3 +48,6 @@ Thumbs.db
 *.log
 *.tmp
 '@ | Out-File -Encoding utf8 .gitignore
+
+# Штуки
+Модель_ЭВМ
