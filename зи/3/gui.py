@@ -1,6 +1,6 @@
-import math
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+import re
 
 from main import (
     CipherError,
@@ -11,35 +11,33 @@ from main import (
 )
 
 
+def bytes_len(n):
+    return (n.bit_length() + 7) // 8
+
+
 class CipherApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Эль-Гамаль Шифратор")
-        self.root.geometry("800x700")
+        self.root.geometry("820x900")
         self.root.resizable(True, True)
 
-        # --- Вкладка "Эль-Гамаль" =====
         notebook = ttk.Notebook(root)
         notebook.grid(row=0, column=0, padx=10, pady=10, sticky="nsew")
 
         eg_frame = ttk.Frame(notebook)
         notebook.add(eg_frame, text="Эль-Гамаль")
 
-        # Текст
         ttk.Label(eg_frame, text="Текст:").pack(anchor="w", padx=10, pady=(5, 0))
-        self.eg_text = tk.Text(eg_frame, height=6, width=90)
+        self.eg_text = tk.Text(eg_frame, height=5, width=90)
         self.eg_text.pack(fill="x", padx=10, pady=5)
 
-        # Импорт из файла
         ttk.Button(eg_frame, text="Импорт из файла", command=self.import_file).pack(anchor="w", padx=10, pady=(0, 5))
 
-        # Генерация ключей
-        self.generate_btn = ttk.Button(
+        ttk.Button(
             eg_frame, text="Генерировать ключи Эль-Гамаля", command=self.generate_elgamal_keys
-        )
-        self.generate_btn.pack(pady=5)
+        ).pack(pady=5)
 
-        # Отображение ключей
         keys_frame = ttk.Frame(eg_frame)
         keys_frame.pack(fill="x", padx=10, pady=5)
 
@@ -59,36 +57,29 @@ class CipherApp:
         self.eg_x_entry = tk.Entry(keys_frame, width=60)
         self.eg_x_entry.grid(row=3, column=1, sticky="w", padx=5, pady=(5, 0))
 
-        # Зашифровать
         ttk.Button(eg_frame, text="Зашифровать", command=self.do_encrypt_elgamal).pack(pady=5)
 
-        # Результат шифрования
         ttk.Label(eg_frame, text="Результат шифрования:").pack(anchor="w", padx=10, pady=(5, 0))
-        self.eg_enc_result = tk.Text(eg_frame, height=6, width=90, state="disabled")
-        self.eg_enc_result.pack(fill="both", expand=True, padx=10, pady=5)
+        self.eg_enc_result = tk.Text(eg_frame, height=5, width=90, state="disabled")
+        self.eg_enc_result.pack(fill="x", padx=10, pady=5)
 
-        # Расшифровка
         ttk.Label(eg_frame, text="Шифротекст (c1,c2 через запятую, пары в скобках):").pack(anchor="w", padx=10, pady=(10, 0))
-        self.eg_dec_text = tk.Text(eg_frame, height=5, width=90)
+        self.eg_dec_text = tk.Text(eg_frame, height=4, width=90)
         self.eg_dec_text.pack(fill="x", padx=10, pady=5)
 
         ttk.Button(eg_frame, text="Расшифровать", command=self.do_decrypt_elgamal).pack(pady=5)
 
-        # Результат расшифровки
         ttk.Label(eg_frame, text="Результат расшифровки:").pack(anchor="w", padx=10, pady=(5, 0))
-        self.eg_dec_result = tk.Text(eg_frame, height=6, width=90, state="disabled")
-        self.eg_dec_result.pack(fill="both", expand=True, padx=10, pady=5)
+        self.eg_dec_result = tk.Text(eg_frame, height=5, width=90, state="disabled")
+        self.eg_dec_result.pack(fill="x", padx=10, pady=5)
 
-        # Распределить пространство
         root.grid_rowconfigure(0, weight=1)
         root.grid_columnconfigure(0, weight=1)
 
-        # --- Информационное поле ---
         self.info_label = ttk.Label(root, text="Готово", foreground="gray")
         self.info_label.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="w")
 
     def import_file(self):
-        """Импорт текста из файла."""
         file_path = filedialog.askopenfilename(
             title="Выберите файл",
             filetypes=[("Текстовые файлы", "*.txt"), ("Все файлы", "*.*")]
@@ -111,7 +102,6 @@ class CipherApp:
         result_widget.config(state="disabled")
 
     def generate_elgamal_keys(self):
-        """Генерирует ключи Эль-Гамаля."""
         try:
             self.info_label.config(text="Генерация ключей Эль-Гамаля...", foreground="blue")
             self.root.update()
@@ -128,10 +118,10 @@ class CipherApp:
             self.eg_x_entry.insert(0, str(x))
 
             info = (
-                f"p = {p} ({p.bit_length()} бит, {len(str(p))} цифр)\n"
-                f"g = {g} ({g.bit_length()} бит, {len(str(g))} цифр, простое)\n"
-                f"x = {x} ({x.bit_length()} бит, {len(str(x))} цифр, простое)\n"
-                f"y = {y} ({y.bit_length()} бит)"
+                f"p = {bytes_len(p)} байт, "
+                f"g = {bytes_len(g)} байт, "
+                f"x = {bytes_len(x)} байт, "
+                f"y = {bytes_len(y)} байт"
             )
             self.info_label.config(text=info, foreground="green")
         except Exception as e:
@@ -139,10 +129,8 @@ class CipherApp:
             self.info_label.config(text="Ошибка генерации", foreground="red")
 
     def _parse_elgamal_ciphertext(self, text):
-        """Пarses ciphertext like '(123,456),(789,012)' into list of tuples."""
         text = text.strip()
         pairs = []
-        import re
         matches = re.findall(r'\(\s*(\d+)\s*,\s*(\d+)\s*\)', text)
         for m in matches:
             pairs.append((int(m[0]), int(m[1])))
@@ -162,18 +150,21 @@ class CipherApp:
         except ValueError:
             messagebox.showerror("Ошибка", "Заполните поля p, g, y числами")
             return
+        except CipherError as e:
+            messagebox.showerror("Ошибка", str(e))
+            return
 
         if not is_prime_miller_rabin(p):
             messagebox.showerror("Ошибка", f"p={p} — не простое число")
             return
-        if len(str(p)) < 20:
-            messagebox.showerror("Ошибка", f"p={p} — менее 20 цифр")
+        if bytes_len(p) < 20:
+            messagebox.showerror("Ошибка", f"p — {bytes_len(p)} байт, нужно ≥ 20")
             return
         if not is_prime_miller_rabin(g):
             messagebox.showerror("Ошибка", f"g={g} — не простое число")
             return
-        if len(str(g)) < 12:
-            messagebox.showerror("Ошибка", f"g={g} — менее 12 цифр")
+        if bytes_len(g) < 12:
+            messagebox.showerror("Ошибка", f"g — {bytes_len(g)} байт, нужно ≥ 12")
             return
 
         try:
@@ -183,8 +174,8 @@ class CipherApp:
             ciphertext = encrypt_elgamal(text, p, g, y)
 
             result = (
-                f"p = {p} ({len(str(p))} цифр)\n"
-                f"g = {g} ({len(str(g))} цифр, простое)\n"
+                f"p = {p} ({bytes_len(p)} байт)\n"
+                f"g = {g} ({bytes_len(g)} байт, простое)\n"
                 f"y = {y}\n\n"
                 f"Зашифрованный текст:\n"
                 + ", ".join(f"({c1},{c2})" for c1, c2 in ciphertext)
@@ -205,6 +196,9 @@ class CipherApp:
             p = int(self.eg_p_entry.get())
         except ValueError:
             messagebox.showerror("Ошибка", "Заполните поля x и p числами")
+            return
+        except CipherError as e:
+            messagebox.showerror("Ошибка", str(e))
             return
 
         if x <= 0 or p <= 0:
