@@ -2,7 +2,6 @@
 import numpy as np
 from pathlib import Path
 from PIL import Image
-import json
 
 IMG_SIZE = 64          # 64x64
 VEC_LEN = IMG_SIZE * IMG_SIZE   # 4096 бит
