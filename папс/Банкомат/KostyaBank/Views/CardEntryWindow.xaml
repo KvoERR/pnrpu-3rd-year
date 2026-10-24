@@ -1,0 +1,109 @@
+<Window x:Class="KostyaBankApp.Views.CardEntryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:KostyaBankApp.ViewModels"
+        Title="Вход в банк"
+        Height="500" Width="420"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize">
+
+    <Window.DataContext>
+        <vm:CardEntryViewModel/>
+    </Window.DataContext>
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="#1B5E20"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#1B5E20"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#2E7D32"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Background" Value="#9E9E9E"/>
+                    <Setter Property="Foreground" Value="#FFFFFF"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#333333"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Background="#F5F5F5">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,30,0,20" HorizontalAlignment="Center">
+            <Border Background="#1B5E20" CornerRadius="12" Width="60" Height="60" Margin="0,0,0,15">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="15" Direction="270" Opacity="0.3" ShadowDepth="3"/>
+                </Border.Effect>
+                <TextBlock Text="KB" Foreground="White" FontSize="24" FontWeight="Bold"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <TextBlock Text="KostyaBank" FontSize="22" FontWeight="Bold" Foreground="#1B5E20"
+                       HorizontalAlignment="Center"/>
+            <TextBlock Text="Введите номер карты для входа" FontSize="13" Foreground="#757575"
+                       HorizontalAlignment="Center" Margin="0,5,0,0"/>
+        </StackPanel>
+
+        <!-- Input Area -->
+        <StackPanel Grid.Row="1" Margin="40,0">
+            <TextBlock Text="Номер карты" FontWeight="SemiBold" Foreground="#424242" Margin="0,0,0,8"/>
+            <TextBox x:Name="CardNumberTextBox"
+                     Text="{Binding CardNumber, UpdateSourceTrigger=PropertyChanged}"
+                     FontSize="18"
+                     FontWeight="SemiBold"
+                     Padding="12,10"
+                     Margin="0,0,0,5"
+                     BorderBrush="#BDBDBD"
+                     BorderThickness="1"
+                     FontFamily="Consolas, 'Courier New'"
+                     MaxLength="16"
+                     PreviewTextInput="CardNumberTextBox_PreviewTextInput"
+                     DataObject.Pasting="CardNumberTextBox_Pasting"/>
+
+            <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#9E9E9E"
+                       Margin="0,2,0,10"/>
+
+            <Border Background="#FFEBEE" CornerRadius="6" Padding="10"
+                    Visibility="{Binding ShowError, Converter={StaticResource BooleanToVisibilityConverter}}"
+                    Margin="0,0,0,10">
+                <TextBlock Text="{Binding ErrorText}" FontSize="12" Foreground="#C62828"
+                           TextWrapping="Wrap"/>
+            </Border>
+        </StackPanel>
+
+        <!-- Button -->
+        <Button Grid.Row="2" Content="Войти"
+                Command="{Binding LoginCommand}"
+                Margin="40,0,40,40" Height="48"
+                IsEnabled="{Binding CanLogin}"/>
+    </Grid>
+</Window>

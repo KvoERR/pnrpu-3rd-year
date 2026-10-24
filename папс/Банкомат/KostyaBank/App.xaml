@@ -1,0 +1,9 @@
+﻿<Application x:Class="KostyaBankApp.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:KostyaBankApp"
+             StartupUri="Views/CardEntryWindow.xaml">
+    <Application.Resources>
+         
+    </Application.Resources>
+</Application>
