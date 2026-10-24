@@ -1,10 +1,11 @@
 """
-Замкнутый кубический сплайн — интерактивное приложение.
+Замкнутый кубический B-сплайн — интерактивное приложение.
 
-ЛКМ — добавить точку
-ПКМ / Escape — завершить ввод и построить сплайн
-R — очистить всё
-Backspace / Delete — удалить последнюю точку
+ЛКМ            — добавить точку
+ПКМ            — удалить ближайшую точку
+1              — построить / перестроить сплайн
+R              — очистить всё
+Backspace/Del  — удалить последнюю точку
 """
 
 import numpy as np
@@ -12,197 +13,54 @@ import matplotlib.pyplot as plt
 
 
 # ---------------------------------------------------------------------------
-# Алгоритм замкнутого кубического сплайна
+# Замкнутый (периодический) кубический B-сплайн
 # ---------------------------------------------------------------------------
 
-def solve_cyclic_system(a, b, c, d):
+def closed_cubic_bspline(points, samples_per_segment=60):
     """
-    Решает циклическую трёхдиагональную систему A*x = d.
+    Строит замкнутый однородный кубический B-сплайн по контрольным точкам.
 
-    A имеет вид:
-        b[0]  c[0]                       0      ...    c[N-1]
-        a[1]  b[1]  c[1]                0      ...      0
-             a[2]  b[2]  c[2]           0      ...      0
-                  ...
-        a[N-1]  0      0  ...  b[N-1]
+    Возвращает (x_fine, y_fine) — массивы точек кривой.
 
-    a — поддиагональ (a[0] игнорируется)
-    b — диагональ
-    c — наддиагональ (c[N-1] — правый верхний угол)
-    d — правая часть
+    Используется периодический базис: контрольные точки «зациклены»,
+    поэтому кривая гладко замкнута (C^2).
     """
-    n = len(b)
+    P = np.asarray(points, dtype=float)
+    n = len(P)
+    if n < 3:
+        return None, None
 
-    if n == 1:
-        return np.array([d[0] / b[0]])
+    # Замыкаем контрольные точки: для сегмента i нужны P[i-1], P[i], P[i+1], P[i+2]
+    # (индексы по модулю n).
+    t = np.linspace(0.0, 1.0, samples_per_segment, endpoint=False)
 
-    # Убираем циклические элементы (c[N-1] и a[0])
-    # Применяем модифицированную прогонку
-    cp = np.zeros(n)
-    dp = np.zeros(n)
+    # Однородные кубические B-сплайн базисные функции на [0,1):
+    # B0(t) = (1-t)^3 / 6
+    # B1(t) = (3t^3 - 6t^2 + 4) / 6
+    # B2(t) = (-3t^3 + 3t^2 + 3t + 1) / 6
+    # B3(t) = t^3 / 6
+    t2 = t * t
+    t3 = t2 * t
+    B0 = (1 - 3 * t + 3 * t2 - t3) / 6.0
+    B1 = (4 - 6 * t2 + 3 * t3) / 6.0
+    B2 = (1 + 3 * t + 3 * t2 - 3 * t3) / 6.0
+    B3 = t3 / 6.0
 
-    cp[0] = c[0] / b[0]
-    dp[0] = d[0] / b[0]
+    xs = []
+    ys = []
+    for i in range(n):
+        p0 = P[(i - 1) % n]
+        p1 = P[i]
+        p2 = P[(i + 1) % n]
+        p3 = P[(i + 2) % n]
+        x = B0 * p0[0] + B1 * p1[0] + B2 * p2[0] + B3 * p3[0]
+        y = B0 * p0[1] + B1 * p1[1] + B2 * p2[1] + B3 * p3[1]
+        xs.append(x)
+        ys.append(y)
 
-    for i in range(1, n):
-        denom = b[i] - a[i] * cp[i - 1]
-        if i < n - 1:
-            cp[i] = c[i] / denom
-        dp[i] = (d[i] - a[i] * dp[i - 1]) / denom
-
-    x = np.zeros(n)
-    x[-1] = dp[-1]
-
-    for i in range(n - 2, -1, -1):
-        x[i] = dp[i] - cp[i] * x[i + 1]
-
-    # Корректировка для циклического элемента
-    # Добавляем влияние c[N-1] и a[0]
-    if n > 1:
-        # Пересчитываем с учётом цикличности
-        # Используем метод добавления ранга-1
-        # Это упрощённый подход — пересчитаем полностью
-
-        # Полный цикл через решение двух систем
-        # Система 1: без циклических элементов
-        # Система 2: корректировка
-
-        # Для простоты используем numpy.linalg.solve для малых N
-        if n <= 100:
-            pass  # перейдём к numpy
-        else:
-            # Для больших N — корректная прогонка
-            # ... (упрощение)
-            pass
-
-    # Для надёжности используем numpy.linalg.solve
-    return None  # пометим, что нужно использовать numpy
-
-
-def closed_cubic_spline(points):
-    """
-    Возвращает массивы t_fine, x_fine, y_fine для замкнутого кубического сплайна.
-
-    points : np.ndarray  shape (N, 2)
-    """
-    pts = np.asarray(points, dtype=float)
-    N = len(pts)
-
-    if N < 2:
-        return None, None, None
-    if N == 2:
-        # Для двух точек — эллипс/овал
-        t_fine = np.linspace(0, 2 * np.pi, 500)
-        x_mid = (pts[0, 0] + pts[1, 0]) / 2
-        y_mid = (pts[0, 1] + pts[1, 1]) / 2
-        x_rad = abs(pts[0, 0] - pts[1, 0]) / 2 + 0.01
-        y_rad = abs(pts[0, 1] - pts[1, 1]) / 2 + 0.01
-        x_fine = x_mid + x_rad * np.cos(t_fine)
-        y_fine = y_mid + y_rad * np.sin(t_fine)
-        return t_fine, x_fine, y_fine
-
-    # --- параметризация по кумулятивной длине (chord-length) ---
-    diffs = np.diff(pts, axis=0)
-    dists = np.sqrt(np.sum(diffs ** 2, axis=1))
-    # Замыкающий отрезок
-    closing = np.sqrt((pts[0, 0] - pts[-1, 0]) ** 2 + (pts[0, 1] - pts[-1, 1]) ** 2)
-    dists = np.concatenate([dists, [closing]])
-    t = np.zeros(N)
-    t[1:] = np.cumsum(dists[:-1])
-    t_norm = t / t[-1] * 2 * np.pi  # масштабируем в [0, 2π]
-
-    # --- решаем для x и y отдельно ---
-    def _solve_coord(coord_vals):
-        h = np.zeros(N)
-        for i in range(N - 1):
-            h[i] = t_norm[i + 1] - t_norm[i]
-        h[N - 1] = t_norm[0] + 2 * np.pi - t_norm[N - 1]
-
-        # Строим циклическую трёхдиагональную систему для M (вторая производная)
-        # Уравнение для узла i:
-        #   h[i-1]*M[i-1] + 2*(h[i-1]+h[i])*M[i] + h[i]*M[i+1] = 6*f[i]
-        # где f[i] — разностное отношение
-
-        a = np.zeros(N)  # поддиагональ
-        b = np.zeros(N)  # диагональ
-        c = np.zeros(N)  # наддиагональ
-        d = np.zeros(N)  # правая часть
-
-        for i in range(N):
-            ip1 = (i + 1) % N      # следующий
-            im1 = (i - 1) % N      # предыдущий
-
-            hi = h[i]
-            him1 = h[im1]
-
-            # Диагональ
-            b[i] = 2.0 * (him1 + hi)
-
-            # Поддиагональ
-            a[i] = him1
-
-            # Наддиагональ
-            c[i] = hi
-
-            # Правая часть
-            if (hi != 0 and him1 != 0):
-                d[i] = 6.0 * ((coord_vals[ip1] - coord_vals[i]) / hi
-                              - (coord_vals[i] - coord_vals[im1]) / him1)
-            else:
-                d[i] = 0.0
-
-        # Решаем систему numpy
-        A = np.zeros((N, N))
-        for i in range(N):
-            A[i, i] = b[i]
-            A[i, (i + 1) % N] = c[i]  # наддиагональ + правый верхний угол
-            A[i, (i - 1) % N] = a[i]  # поддиагональ + левый нижний угол
-
-        M = np.linalg.solve(A, d)
-
-        # --- интерполяция на fine сетке ---
-        t_fine = np.linspace(t_norm[0], t_norm[0] + 2 * np.pi, 1000)
-        x_fine = np.zeros_like(t_fine)
-
-        for k, tk in enumerate(t_fine):
-            # Находим интервал [t_norm[i], t_norm[i+1]] или замыкающий
-            if tk >= t_norm[-1]:
-                # Замыкающий интервал
-                i = N - 1
-                ti = t_norm[i]
-                t_next = t_norm[0] + 2 * np.pi
-                hi = t_next - ti
-                xi = coord_vals[i]
-                xi1 = coord_vals[0]
-            else:
-                i = np.searchsorted(t_norm, tk, side='right') - 1
-                i = max(0, min(i, N - 2))
-                ti = t_norm[i]
-                t_next = t_norm[i + 1]
-                hi = t_next - ti
-                xi = coord_vals[i]
-                xi1 = coord_vals[i + 1]
-
-            if hi < 1e-12:
-                hi = 1e-12
-
-            # Кубическая интерполяция:
-            # f(t) = M[i]*(t_next-t)^3/(6*hi) + M[i+1]*(t-ti)^3/(6*hi)
-            #        + (y[i] - M[i]*hi^2/6)*(t_next-t)/hi
-            #        + (y[i+1] - M[i+1]*hi^2/6)*(t-ti)/hi
-            A_cubic = (t_next - tk) ** 3 / (6.0 * hi)
-            B_cubic = (tk - ti) ** 3 / (6.0 * hi)
-            C_cubic = (xi - M[i] * hi ** 2 / 6.0) * (t_next - tk) / hi
-            D_cubic = (xi1 - M[(i + 1) % N] * hi ** 2 / 6.0) * (tk - ti) / hi
-
-            x_fine[k] = A_cubic * M[i] + B_cubic * M[(i + 1) % N] + C_cubic + D_cubic
-
-        return t_fine, x_fine
-
-    t_fine, x_fine = _solve_coord(pts[:, 0])
-    _, y_fine = _solve_coord(pts[:, 1])
-
-    return t_fine, x_fine, y_fine
+    x_fine = np.concatenate(xs + [xs[0][:1]])
+    y_fine = np.concatenate(ys + [ys[0][:1]])
+    return x_fine, y_fine
 
 
 # ---------------------------------------------------------------------------
@@ -211,9 +69,8 @@ def closed_cubic_spline(points):
 
 class SplineApp:
     def __init__(self):
-        self.points = []
+        self.points = []          # список [x, y]
         self.spline_built = False
-        self.t_fine = None
         self.x_fine = None
         self.y_fine = None
 
@@ -221,19 +78,26 @@ class SplineApp:
         self.ax.set_aspect('equal')
         self.ax.set_xlabel('X')
         self.ax.set_ylabel('Y')
-        self.ax.set_title('Замкнутый кубический сплайн\nЛКМ — добавить точку | ПКМ/Esc — построить | R — очистить | Backspace — удалить')
+        self.ax.set_title(
+            'Замкнутый кубический B-сплайн\n'
+            'ЛКМ — добавить | ПКМ — удалить точку | 1 — построить | R — очистить'
+        )
         self.ax.grid(True, alpha=0.3)
         self.ax.axhline(0, color='black', linewidth=0.5)
         self.ax.axvline(0, color='black', linewidth=0.5)
 
         self.point_scatter = None
-        self.spline_line, = self.ax.plot([], [], 'b-', linewidth=2, label='Сплайн')
-        self.status_text = self.ax.text(0.02, 0.02, '', transform=self.ax.transAxes,
-                                        fontsize=9, verticalalignment='bottom',
-                                        bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8))
+        self.point_annotations = []
+        self.spline_line, = self.ax.plot([], [], 'b-', linewidth=2, label='B-сплайн')
+        self.status_text = self.ax.text(
+            0.02, 0.02, '', transform=self.ax.transAxes,
+            fontsize=9, verticalalignment='bottom',
+            bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8)
+        )
 
         self.fig.canvas.mpl_connect('button_press_event', self.on_click)
         self.fig.canvas.mpl_connect('motion_notify_event', self.on_motion)
+        self.fig.canvas.mpl_connect('key_press_event', self.on_key)
 
         self._update_view()
         plt.show()
@@ -243,63 +107,100 @@ class SplineApp:
     def on_click(self, event):
         if event.inaxes != self.ax:
             return
-
-        if event.button == 1:  # ЛКМ — добавить точку
-            self.points.append([event.xdata, event.ydata])
-            self.spline_built = False
-            self._draw_points()
-            self._update_view()
-            self.fig.canvas.draw_idle()
-
-        elif event.button == 3 or event.key == 'escape':  # ПКМ / Escape
-            self._build_spline()
-
-    def on_motion(self, event):
-        if event.inaxes != self.ax:
-            self.status_text.set_text('')
-            return
-
         if event.xdata is None or event.ydata is None:
             return
 
+        if event.button == 1:                      # ЛКМ — добавить
+            self.points.append([event.xdata, event.ydata])
+            self.spline_built = False
+            self._redraw_points()
+            self._update_view()
+            self.fig.canvas.draw_idle()
+
+        elif event.button == 3:                    # ПКМ — удалить ближайшую
+            self._remove_nearest(event.xdata, event.ydata)
+
+    def on_motion(self, event):
+        if event.inaxes != self.ax or event.xdata is None:
+            self.status_text.set_text('')
+            self.fig.canvas.draw_idle()
+            return
         info = f'Координаты: ({event.xdata:.2f}, {event.ydata:.2f})'
         if self.points:
             info += f'  |  Точек: {len(self.points)}'
         if self.spline_built:
             info += '  |  Сплайн построен'
         self.status_text.set_text(info)
+        self.fig.canvas.draw_idle()
+
+    def on_key(self, event):
+        if event.key in ('r', 'R'):
+            self._clear()
+        elif event.key in ('backspace', 'delete'):
+            if self.points:
+                self.points.pop()
+                self.spline_built = False
+                self._redraw_points()
+                self._update_view()
+                self.fig.canvas.draw_idle()
+        elif event.key == '1':
+            self._build_spline()
+
+    # ---- удаление ближайшей точки ------------------------------------------
+
+    def _remove_nearest(self, x, y):
+        if not self.points:
+            return
+        pts = np.array(self.points)
+        d2 = (pts[:, 0] - x) ** 2 + (pts[:, 1] - y) ** 2
+        idx = int(np.argmin(d2))
+        # «Радиус захвата»: 10% от текущего размаха осей — чтобы не удалять
+        # точку, если кликнули далеко от неё.
+        xlim = self.ax.get_xlim()
+        ylim = self.ax.get_ylim()
+        grab = 0.05 * max(xlim[1] - xlim[0], ylim[1] - ylim[0])
+        if d2[idx] <= grab ** 2:
+            self.points.pop(idx)
+            self.spline_built = False
+            self._redraw_points()
+            self._update_view()
+            self.fig.canvas.draw_idle()
 
     # ---- отрисовка ----------------------------------------------------------
 
-    def _draw_points(self):
+    def _redraw_points(self):
         if self.point_scatter is not None:
             self.point_scatter.remove()
+            self.point_scatter = None
+        for ann in self.point_annotations:
+            ann.remove()
+        self.point_annotations.clear()
 
         if not self.points:
-            self.point_scatter = None
             return
 
         pts = np.array(self.points)
-        self.point_scatter = self.ax.scatter(pts[:, 0], pts[:, 1], c='red', s=60, zorder=5, edgecolors='darkred')
-
-        # Номера точек
+        self.point_scatter = self.ax.scatter(
+            pts[:, 0], pts[:, 1], c='red', s=60, zorder=5,
+            edgecolors='darkred', label='Контрольные точки'
+        )
         for i, (x, y) in enumerate(pts):
-            self.ax.annotate(str(i), (x, y),
-                             textcoords='offset points', xytext=(6, 6),
-                             fontsize=8, color='darkred', fontweight='bold')
+            ann = self.ax.annotate(
+                str(i), (x, y), textcoords='offset points', xytext=(6, 6),
+                fontsize=8, color='darkred', fontweight='bold'
+            )
+            self.point_annotations.append(ann)
 
     def _build_spline(self):
-        if len(self.points) < 2:
-            print("Нужно минимум 2 точки для построения сплайна.")
+        if len(self.points) < 3:
+            print("Нужно минимум 3 точки для замкнутого B-сплайна.")
             return
 
-        print(f"Построение сплайна по {len(self.points)} точкам...")
-        self.t_fine, self.x_fine, self.y_fine = closed_cubic_spline(self.points)
-        if self.t_fine is None:
+        print(f"Построение B-сплайна по {len(self.points)} точкам...")
+        self.x_fine, self.y_fine = closed_cubic_bspline(self.points)
+        if self.x_fine is None:
             print("Ошибка: недостаточно точек.")
             return
-
-        print(f"Сплайн: {len(self.x_fine)} точек, X=[{self.x_fine.min():.2f}, {self.x_fine.max():.2f}], Y=[{self.y_fine.min():.2f}, {self.y_fine.max():.2f}]")
 
         self.spline_line.set_data(self.x_fine, self.y_fine)
         self.spline_line.set_visible(True)
@@ -310,12 +211,10 @@ class SplineApp:
     def _clear(self):
         self.points.clear()
         self.spline_built = False
-        self.t_fine = self.x_fine = self.y_fine = None
+        self.x_fine = self.y_fine = None
         self.spline_line.set_visible(False)
         self.spline_line.set_data([], [])
-        if self.point_scatter is not None:
-            self.point_scatter.remove()
-            self.point_scatter = None
+        self._redraw_points()
         self._update_view()
         self.fig.canvas.draw_idle()
 
@@ -335,33 +234,13 @@ class SplineApp:
         else:
             self.ax.set_xlim(-5, 5)
             self.ax.set_ylim(-5, 5)
-
         self.ax.legend(loc='upper right')
 
 
 # ---------------------------------------------------------------------------
-# Горячие клавиши
-# ---------------------------------------------------------------------------
-
-def _on_key(event):
-    if event.inaxes is None:
-        return
-    app = event.canvas.manager.app
-    if event.key == 'r' or event.key == 'R':
-        app._clear()
-    elif event.key == 'backspace' or event.key == 'delete':
-        if app.points:
-            app.points.pop()
-            app.spline_built = False
-            app._draw_points()
-            app._update_view()
-            event.canvas.draw_idle()
-
 
 def main():
-    app = SplineApp()
-    app.fig.canvas.manager.app = app  # храним ссылку на app
-    app.fig.canvas.mpl_connect('key_press_event', _on_key)
+    SplineApp()
 
 
 if __name__ == '__main__':
