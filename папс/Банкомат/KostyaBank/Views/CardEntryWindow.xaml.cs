@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -18,7 +17,7 @@ public partial class CardEntryWindow : Window
 
     private void CardNumberTextBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
     {
-        e.Handled = !Regex.IsMatch(e.Text, @"^\d$");
+        e.Handled = !System.Text.RegularExpressions.Regex.IsMatch(e.Text, @"^\d$");
     }
 
     private void CardNumberTextBox_Pasting(object sender, DataObjectPastingEventArgs e)
@@ -26,7 +25,7 @@ public partial class CardEntryWindow : Window
         if (e.DataObject.GetDataPresent(typeof(string)))
         {
             var text = (string)e.DataObject.GetData(typeof(string));
-            if (!Regex.IsMatch(text, @"^\d+$"))
+            if (!System.Text.RegularExpressions.Regex.IsMatch(text, @"^\d+$"))
                 e.CancelCommand();
         }
         else

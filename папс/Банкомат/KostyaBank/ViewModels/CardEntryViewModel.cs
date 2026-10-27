@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using KostyaBankApp.Models;
+using KostyaBankApp.Services;
 
 namespace KostyaBankApp.ViewModels;
 
@@ -8,7 +9,7 @@ namespace KostyaBankApp.ViewModels;
 /// </summary>
 public class CardEntryViewModel : BaseViewModel
 {
-    private readonly Card _card = new();
+    private readonly CardRepository _repository;
     private string _cardNumber = string.Empty;
     private string _statusText = string.Empty;
     private bool _canLogin;
@@ -18,6 +19,7 @@ public class CardEntryViewModel : BaseViewModel
 
     public CardEntryViewModel()
     {
+        _repository = new CardRepository("cards.xlsx");
         _loginCommand = new SimpleCommand(ExecuteLogin, () => _canLogin);
         UpdateStatus();
     }
@@ -29,7 +31,6 @@ public class CardEntryViewModel : BaseViewModel
         {
             if (_cardNumber == value) return;
             _cardNumber = value;
-            _card.CardNumber = value;
             OnPropertyChanged();
             UpdateStatus();
         }
@@ -53,43 +54,74 @@ public class CardEntryViewModel : BaseViewModel
         private set => SetProperty(ref _showError, value);
     }
 
-    public bool CanLogin => _canLogin;
+    public bool CanLogin
+    {
+        get => _canLogin;
+        private set
+        {
+            if (SetProperty(ref _canLogin, value))
+            {
+                (_loginCommand as SimpleCommand)?.RaiseCanExecuteChanged();
+            }
+        }
+    }
 
     public ICommand LoginCommand => _loginCommand;
 
     private void ExecuteLogin()
     {
-        if (_card.IsValid)
+        if (CardNumber.Length != 16 || !CardNumber.All(char.IsDigit))
         {
-            var mainViewModel = new MainMenuViewModel(_card);
-            var mainWindow = new Views.MainWindow(mainViewModel);
-            mainWindow.Show();
+            ShowError = true;
+            CanLogin = false;
+            ErrorText = "Номер карты должен содержать 16 цифр";
+            StatusText = "✗ Неверный формат";
+            return;
+        }
+
+        var cardRecord = _repository.GetCardByNumber(CardNumber);
+
+        if (cardRecord != null)
+        {
+            try
+            {
+                var navigationService = new NavigationService(cardRecord);
+                navigationService.ShowMainMenu();
+            }
+            catch (Exception ex)
+            {
+                System.Windows.MessageBox.Show($"Ошибка: {ex.Message}");
+            }
             return;
         }
 
         ShowError = true;
-        _canLogin = false;
-        ErrorText = _card.ErrorMessage ?? "Неверный номер карты";
-        StatusText = "✗ Неверный формат";
-        (_loginCommand as SimpleCommand)?.RaiseCanExecuteChanged();
+        CanLogin = false;
+        ErrorText = "Карта не найдена в базе";
+        StatusText = "✗ Не найдена";
     }
 
     private void UpdateStatus()
     {
         ShowError = false;
-        _canLogin = false;
 
         if (string.IsNullOrEmpty(CardNumber))
         {
             StatusText = "0 / 16 цифр";
             ErrorText = string.Empty;
+            CanLogin = false;
+        }
+        else if (CardNumber.Length == 16 && CardNumber.All(char.IsDigit))
+        {
+            StatusText = "✓ Готово";
+            ErrorText = string.Empty;
+            CanLogin = true;
         }
         else
         {
             StatusText = $"{CardNumber.Length} / 16 цифр";
             ErrorText = string.Empty;
+            CanLogin = false;
         }
-
-        (_loginCommand as SimpleCommand)?.RaiseCanExecuteChanged();
     }
 }

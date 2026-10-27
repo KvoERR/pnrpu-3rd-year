@@ -77,17 +77,15 @@
         <StackPanel Grid.Row="1" Margin="40,0">
             <TextBlock Text="Номер карты" FontWeight="SemiBold" Foreground="#424242" Margin="0,0,0,8"/>
             <TextBox x:Name="CardNumberTextBox"
-                     Text="{Binding CardNumber, UpdateSourceTrigger=PropertyChanged}"
-                     FontSize="18"
-                     FontWeight="SemiBold"
-                     Padding="12,10"
-                     Margin="0,0,0,5"
-                     BorderBrush="#BDBDBD"
-                     BorderThickness="1"
-                     FontFamily="Consolas, 'Courier New'"
-                     MaxLength="16"
-                     PreviewTextInput="CardNumberTextBox_PreviewTextInput"
-                     DataObject.Pasting="CardNumberTextBox_Pasting"/>
+                      Text="{Binding CardNumber, UpdateSourceTrigger=PropertyChanged}"
+                      FontSize="18"
+                      FontWeight="SemiBold"
+                      Padding="12,10"
+                      Margin="0,0,0,5"
+                      BorderBrush="#BDBDBD"
+                      BorderThickness="1"
+                      FontFamily="Consolas, 'Courier New'"
+                      MaxLength="16"/>
 
             <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="#9E9E9E"
                        Margin="0,2,0,10"/>

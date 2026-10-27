@@ -9,7 +9,7 @@ namespace KostyaBankApp.ViewModels;
 /// </summary>
 public class MainMenuViewModel : BaseViewModel
 {
-    private readonly Card _card;
+    private readonly CardRecord _card;
     private readonly ICommand _balanceCommand;
     private readonly ICommand _depositCommand;
     private readonly ICommand _withdrawCommand;
@@ -17,7 +17,7 @@ public class MainMenuViewModel : BaseViewModel
     private readonly ICommand _settingsCommand;
     private readonly ICommand _exitCommand;
 
-    public MainMenuViewModel(Card card)
+    public MainMenuViewModel(CardRecord card)
     {
         _card = card ?? throw new ArgumentNullException(nameof(card));
         
@@ -28,6 +28,10 @@ public class MainMenuViewModel : BaseViewModel
         _settingsCommand = new SimpleCommand(() => ShowSection("Настройки"));
         _exitCommand = new SimpleCommand(() => ExitApp());
     }
+
+    public string CardNumber => _card.CardNumber;
+    public string HolderName => _card.HolderName;
+    public decimal Balance => _card.Balance;
 
     public string MaskedCardNumber => _card.MaskedNumber;
 
@@ -41,7 +45,7 @@ public class MainMenuViewModel : BaseViewModel
     private void ShowSection(string sectionName)
     {
         System.Windows.MessageBox.Show(
-            $"{sectionName} для карты {_card.MaskedNumber}\n\nЭтот раздел в разработке.",
+            $"{sectionName}\n\nКлиент: {_card.HolderName}\nБаланс: {_card.Balance:C}\n\nЭтот раздел в разработке.",
             sectionName,
             System.Windows.MessageBoxButton.OK,
             System.Windows.MessageBoxImage.Information);

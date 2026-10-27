@@ -18,17 +18,6 @@ public class Card
         }
     }
 
-    public string MaskedNumber
-    {
-        get
-        {
-            if (CardNumber.Length < 4)
-                return "****";
-            var last4 = CardNumber.Substring(CardNumber.Length - 4);
-            return $"**** **** **** {last4}";
-        }
-    }
-
     public string? ErrorMessage
     {
         get
