@@ -1,15 +1,23 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
-using Excel = Microsoft.Office.Interop.Excel;
+using OfficeOpenXml;
 
 namespace KostyaBankApp.Models;
 
 /// <summary>
-/// Читает данные карт из Excel-файла или использует встроенную базу.
+/// Читает данные карт из Excel-файла с помощью EPPlus.
 /// </summary>
 public class Computer
 {
-    private readonly string _filePath = "comp.xlsx";
+    private readonly string _filePath;
+
+    public Computer()
+    {
+        // Ищем файл рядом с исполняемым файлом
+        var exeDir = AppDomain.CurrentDomain.BaseDirectory;
+        _filePath = Path.Combine(exeDir, "comp.xlsx");
+    }
 
     public Card? GetCardByNumber(string cardNumber)
     {
@@ -20,43 +28,36 @@ public class Computer
     private List<Card> LoadFromExcel()
     {
         var cards = new List<Card>();
-        var excelApp = new Excel.Application();
-        Excel.Workbook workbook = null;
 
-        try
+        if (!File.Exists(_filePath))
         {
-            workbook = excelApp.Workbooks.Open(_filePath);
-            Excel.Worksheet worksheet = (Excel.Worksheet)workbook.Sheets[1];
-
-            int row = 2;
-            while (true)
-            {
-                Excel.Range cell = (Excel.Range)worksheet.Cells[row, 1];
-                if (cell.Value2 == null) break;
-
-                var cardNumber = cell.Value2.ToString() ?? string.Empty;
-                Excel.Range holderCell = (Excel.Range)worksheet.Cells[row, 2];
-                Excel.Range balanceCell = (Excel.Range)worksheet.Cells[row, 3];
-                var holderName = holderCell.Value2?.ToString() ?? string.Empty;
-                var balance = balanceCell.Value2?.ToString();
-
-                if (!string.IsNullOrEmpty(cardNumber))
-                {
-                    cards.Add(new Card
-                    {
-                        CardNumber = cardNumber,
-                        HolderName = holderName,
-                        Balance = decimal.TryParse(balance, out var bal) ? bal : 0
-                    });
-                }
-
-                row++;
-            }
+            return cards;
         }
-        finally
+
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+        using var package = new ExcelPackage(new FileInfo(_filePath));
+        var worksheet = package.Workbook.Worksheets[0];
+
+        if (worksheet == null) return cards;
+
+        int row = 2;
+        while (true)
         {
-            workbook?.Close(false);
-            excelApp?.Quit();
+            var cardNumber = worksheet.Cells[row, 1].Value?.ToString() ?? string.Empty;
+            if (string.IsNullOrEmpty(cardNumber)) break;
+
+            var holderName = worksheet.Cells[row, 2].Value?.ToString() ?? string.Empty;
+            var balanceStr = worksheet.Cells[row, 3].Value?.ToString();
+
+            cards.Add(new Card
+            {
+                CardNumber = cardNumber,
+                HolderName = holderName,
+                Balance = decimal.TryParse(balanceStr, out var bal) ? bal : 0
+            });
+
+            row++;
         }
 
         return cards;

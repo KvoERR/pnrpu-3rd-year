@@ -8,7 +8,7 @@ namespace KostyaBankApp.ViewModels;
 /// </summary>
 public class CardEntryViewModel : BaseViewModel
 {
-    private readonly Computer _repository;
+    private readonly Computer _computer;
     private readonly AppViewModel _appViewModel;
     private string _cardNumber = string.Empty;
     private string _statusText = string.Empty;
@@ -19,7 +19,7 @@ public class CardEntryViewModel : BaseViewModel
 
     public CardEntryViewModel(AppViewModel appViewModel)
     {
-        _repository = new Computer();
+        _computer = new Computer();
         _appViewModel = appViewModel;
         _loginCommand = new SimpleCommand(ExecuteLogin, () => _canLogin);
         UpdateStatus();
@@ -80,7 +80,7 @@ public class CardEntryViewModel : BaseViewModel
             return;
         }
 
-        var card = _repository.GetCardByNumber(CardNumber);
+        var card = _computer.GetCardByNumber(CardNumber);
 
         if (card != null)
         {
