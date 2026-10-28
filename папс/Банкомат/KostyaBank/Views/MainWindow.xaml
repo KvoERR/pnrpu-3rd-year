@@ -18,6 +18,12 @@
         <DataTemplate DataType="{x:Type vm:ServiceViewModel}">
             <views:ServiceView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:ShowFormViewModel}">
+            <views:ShowFormView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:GetFormViewModel}">
+            <views:GetFormView />
+        </DataTemplate>
     </Window.Resources>
 
     <Grid Background="#F5F5F5">

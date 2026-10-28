@@ -72,16 +72,10 @@
 
         <!-- Menu Buttons -->
         <StackPanel Grid.Row="0" Margin="20,20">
-            <Button Content="💰  Баланс" Style="{StaticResource ResourceKey=MenuButton}"
-                    Command="{Binding BalanceCommand}"/>
-            <Button Content="📥  Пополнить" Style="{StaticResource ResourceKey=MenuButton}"
-                    Command="{Binding DepositCommand}"/>
-            <Button Content="🏧  Снять" Style="{StaticResource ResourceKey=MenuButton}"
-                    Command="{Binding WithdrawCommand}"/>
-            <Button Content="📋  История операций" Style="{StaticResource ResourceKey=MenuButton}"
-                    Command="{Binding HistoryCommand}"/>
-            <Button Content="⚙️  Настройки" Style="{StaticResource ResourceKey=MenuButton}"
-                    Command="{Binding SettingsCommand}"/>
+            <Button Content="💰  Узнать баланс" Style="{StaticResource ResourceKey=MenuButton}"
+                    Command="{Binding ShowCommand}"/>
+            <Button Content="🏧  Снять наличные" Style="{StaticResource ResourceKey=MenuButton}"
+                    Command="{Binding GetCommand}"/>
         </StackPanel>
 
         <!-- Exit -->

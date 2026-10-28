@@ -17,24 +17,27 @@ public class AppViewModel : BaseViewModel
 
     public AppViewModel()
     {
-        Log.Write("AppViewModel created, setting CurrentView to CardEntryViewModel");
-        // Start with card entry view
         CurrentView = new CardEntryViewModel(this);
-        Log.Write("CardEntryViewModel set as CurrentView");
     }
 
     public void ShowCardEntry()
     {
-        Log.Write("ShowCardEntry called");
         CurrentView = new CardEntryViewModel(this);
-        Log.Write("CardEntryViewModel set as CurrentView");
     }
 
     public void ShowMainMenu(Card card)
     {
-        Log.Write($"ShowMainMenu called for card {card?.CardNumber ?? "null"}");
         CurrentView = new MainMenuViewModel(card, this);
-        Log.Write("MainMenuViewModel set as CurrentView");
+    }
+
+    public void ShowGetForm(Card card)
+    {
+        CurrentView = new GetFormViewModel(card, this);
+    }
+
+    public void ShowShowForm(Card card)
+    {
+        CurrentView = new ShowFormViewModel(card, this);
     }
 
     public void ShowServiceView()

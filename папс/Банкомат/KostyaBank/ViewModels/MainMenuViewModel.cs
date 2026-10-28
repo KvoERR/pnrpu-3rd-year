@@ -11,11 +11,8 @@ public class MainMenuViewModel : BaseViewModel
 {
     private readonly Card _card;
     private readonly AppViewModel _appViewModel;
-    private readonly ICommand _balanceCommand;
-    private readonly ICommand _depositCommand;
-    private readonly ICommand _withdrawCommand;
-    private readonly ICommand _historyCommand;
-    private readonly ICommand _settingsCommand;
+    private readonly ICommand _showCommand;
+    private readonly ICommand _getCommand;
     private readonly ICommand _exitCommand;
 
     public MainMenuViewModel(Card card, AppViewModel appViewModel)
@@ -23,11 +20,8 @@ public class MainMenuViewModel : BaseViewModel
         _card = card ?? throw new ArgumentNullException(nameof(card));
         _appViewModel = appViewModel;
         
-        _balanceCommand = new SimpleCommand(() => ShowSection("Баланс"));
-        _depositCommand = new SimpleCommand(() => ShowSection("Пополнение"));
-        _withdrawCommand = new SimpleCommand(() => ShowSection("Снятие"));
-        _historyCommand = new SimpleCommand(() => ShowSection("История"));
-        _settingsCommand = new SimpleCommand(() => ShowSection("Настройки"));
+        _showCommand = new SimpleCommand(() => _appViewModel.ShowShowForm(_card));
+        _getCommand = new SimpleCommand(() => _appViewModel.ShowGetForm(_card));
         _exitCommand = new SimpleCommand(() => ExitApp());
     }
 
@@ -36,11 +30,8 @@ public class MainMenuViewModel : BaseViewModel
     public string HolderName => _card.HolderName;
     public decimal Balance => _card.Balance;
 
-    public ICommand BalanceCommand => _balanceCommand;
-    public ICommand DepositCommand => _depositCommand;
-    public ICommand WithdrawCommand => _withdrawCommand;
-    public ICommand HistoryCommand => _historyCommand;
-    public ICommand SettingsCommand => _settingsCommand;
+    public ICommand ShowCommand => _showCommand;
+    public ICommand GetCommand => _getCommand;
     public ICommand ExitCommand => _exitCommand;
 
     private void ShowSection(string sectionName)
