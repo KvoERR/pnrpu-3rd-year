@@ -1,4 +1,4 @@
-using KostyaBankApp.Models;
+using System.Windows.Input;
 
 namespace KostyaBankApp.ViewModels;
 
@@ -7,12 +7,14 @@ namespace KostyaBankApp.ViewModels;
 /// </summary>
 public class ServiceViewModel : BaseViewModel
 {
-    private readonly Card _card;
+    private readonly AppViewModel _appViewModel;
     private string _statusText = "Сервисные операции";
+    private readonly ICommand _backCommand;
 
-    public ServiceViewModel(Card card)
+    public ServiceViewModel(AppViewModel appViewModel)
     {
-        _card = card ?? throw new ArgumentNullException(nameof(card));
+        _appViewModel = appViewModel;
+        _backCommand = new SimpleCommand(() => _appViewModel.ShowCardEntry());
     }
 
     public string StatusText
@@ -21,6 +23,5 @@ public class ServiceViewModel : BaseViewModel
         private set => SetProperty(ref _statusText, value);
     }
 
-    public string CardInfo => $"Клиент: {_card.HolderName} | Карта: **** **** **** {_card.CardNumber[^4..]}";
-    public decimal Balance => _card.Balance;
+    public ICommand BackCommand => _backCommand;
 }

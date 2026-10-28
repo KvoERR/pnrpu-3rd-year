@@ -1,8 +1,5 @@
-﻿using System.Configuration;
-using System.Data;
-using System.Windows;
-using System.Windows.Input;
-using KostyaBankApp.Models;
+﻿using System.Windows;
+using System.Windows.Threading;
 using KostyaBankApp.ViewModels;
 
 namespace KostyaBankApp;
@@ -14,35 +11,30 @@ public partial class App : Application
 {
     protected override void OnStartup(StartupEventArgs e)
     {
+        // Global error handler
+        DispatcherUnhandledException += App_DispatcherUnhandledException;
+        AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+        
         base.OnStartup(e);
 
-        EventManager.RegisterClassHandler(
-            typeof(Window),
-            Window.PreviewKeyDownEvent,
-            new KeyEventHandler(App_PreviewKeyDown),
-            handledEventsToo: true);
+        var appViewModel = new AppViewModel();
+        var mainWindow = new Views.MainWindow();
+        mainWindow.DataContext = appViewModel;
+        mainWindow.Show();
+        Application.Current.MainWindow = mainWindow;
     }
 
-    private void App_PreviewKeyDown(object sender, KeyEventArgs e)
+    private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        if (e.Key == Key.S)
+        MessageBox.Show($"Error: {e.Exception.Message}\n\n{e.Exception.StackTrace}");
+        e.Handled = true;
+    }
+
+    private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        if (e.ExceptionObject is Exception ex)
         {
-            var repo = new Computer("cards.xlsx");
-            var card = repo.GetCardByNumber("4276590123456789");
-
-            if (card != null)
-            {
-                var loginWindow = Application.Current.MainWindow;
-
-                var viewModel = new ServiceViewModel(card);
-                var serviceWindow = new Views.ServiceView(viewModel);
-
-                loginWindow.Hide();
-                Application.Current.MainWindow = serviceWindow;
-                serviceWindow.Show();
-
-                e.Handled = true;
-            }
+            MessageBox.Show($"Error: {ex.Message}\n\n{ex.StackTrace}");
         }
     }
 }

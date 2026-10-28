@@ -1,15 +1,15 @@
 using System.Windows.Input;
 using KostyaBankApp.Models;
-using KostyaBankApp.Services;
 
 namespace KostyaBankApp.ViewModels;
 
 /// <summary>
-/// ViewModel for the card entry window.
+/// ViewModel for the card entry view.
 /// </summary>
 public class CardEntryViewModel : BaseViewModel
 {
     private readonly Computer _repository;
+    private readonly AppViewModel _appViewModel;
     private string _cardNumber = string.Empty;
     private string _statusText = string.Empty;
     private bool _canLogin;
@@ -17,9 +17,10 @@ public class CardEntryViewModel : BaseViewModel
     private bool _showError;
     private readonly ICommand _loginCommand;
 
-    public CardEntryViewModel()
+    public CardEntryViewModel(AppViewModel appViewModel)
     {
-        _repository = new Computer("cards.xlsx");
+        _repository = new Computer();
+        _appViewModel = appViewModel;
         _loginCommand = new SimpleCommand(ExecuteLogin, () => _canLogin);
         UpdateStatus();
     }
@@ -79,19 +80,11 @@ public class CardEntryViewModel : BaseViewModel
             return;
         }
 
-        var cardRecord = _repository.GetCardByNumber(CardNumber);
+        var card = _repository.GetCardByNumber(CardNumber);
 
-        if (cardRecord != null)
+        if (card != null)
         {
-            try
-            {
-                var navigationService = new NavigationService(cardRecord);
-                navigationService.ShowMainMenu();
-            }
-            catch (Exception ex)
-            {
-                System.Windows.MessageBox.Show($"Ошибка: {ex.Message}");
-            }
+            _appViewModel.ShowMainMenu(card);
             return;
         }
 

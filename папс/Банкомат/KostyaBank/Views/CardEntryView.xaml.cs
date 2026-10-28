@@ -1,17 +1,23 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using KostyaBankApp.ViewModels;
 
 namespace KostyaBankApp.Views;
 
 /// <summary>
-/// Interaction logic for CardEntryWindow.xaml
+/// Interaction logic for CardEntryView.xaml
 /// </summary>
-public partial class CardEntryWindow : Window
+public partial class CardEntryView : UserControl
 {
-    public CardEntryWindow()
+    public CardEntryView()
     {
         InitializeComponent();
+        DataObject.AddPastingHandler(CardNumberTextBox, CardNumberTextBox_Pasting);
+    }
+
+    private void CardNumberTextBox_Loaded(object sender, RoutedEventArgs e)
+    {
         CardNumberTextBox.Focus();
     }
 

@@ -9,34 +9,12 @@ namespace KostyaBankApp.Models;
 /// </summary>
 public class Computer
 {
-    private readonly string _filePath;
-    private readonly List<Card> _fallbackCards = new()
-    {
-        new Card { CardNumber = "4276590123456789", HolderName = "Иван Иванов", Balance = 50000 },
-        new Card { CardNumber = "4276590123456790", HolderName = "Мария Петрова", Balance = 120000 }
-    };
-
-    public Computer(string filePath)
-    {
-        _filePath = filePath;
-    }
+    private readonly string _filePath = "comp.xlsx";
 
     public Card? GetCardByNumber(string cardNumber)
     {
-        var allCards = LoadAllCards();
+        var allCards = LoadFromExcel();
         return allCards.FirstOrDefault(c => c.CardNumber == cardNumber);
-    }
-
-    private List<Card> LoadAllCards()
-    {
-        try
-        {
-            return LoadFromExcel();
-        }
-        catch
-        {
-            return _fallbackCards;
-        }
     }
 
     private List<Card> LoadFromExcel()

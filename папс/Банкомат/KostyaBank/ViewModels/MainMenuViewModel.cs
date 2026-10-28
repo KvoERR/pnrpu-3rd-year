@@ -5,11 +5,12 @@ using KostyaBankApp.Models;
 namespace KostyaBankApp.ViewModels;
 
 /// <summary>
-/// ViewModel for the main menu window.
+/// ViewModel for the main menu view.
 /// </summary>
 public class MainMenuViewModel : BaseViewModel
 {
     private readonly Card _card;
+    private readonly AppViewModel _appViewModel;
     private readonly ICommand _balanceCommand;
     private readonly ICommand _depositCommand;
     private readonly ICommand _withdrawCommand;
@@ -17,9 +18,10 @@ public class MainMenuViewModel : BaseViewModel
     private readonly ICommand _settingsCommand;
     private readonly ICommand _exitCommand;
 
-    public MainMenuViewModel(Card card)
+    public MainMenuViewModel(Card card, AppViewModel appViewModel)
     {
         _card = card ?? throw new ArgumentNullException(nameof(card));
+        _appViewModel = appViewModel;
         
         _balanceCommand = new SimpleCommand(() => ShowSection("Баланс"));
         _depositCommand = new SimpleCommand(() => ShowSection("Пополнение"));
@@ -30,6 +32,7 @@ public class MainMenuViewModel : BaseViewModel
     }
 
     public string CardNumber => _card.CardNumber;
+    public string MaskedCardNumber => $"**** **** **** {CardNumber.Substring(12)}";
     public string HolderName => _card.HolderName;
     public decimal Balance => _card.Balance;
 
@@ -59,7 +62,7 @@ public class MainMenuViewModel : BaseViewModel
 
         if (result == System.Windows.MessageBoxResult.Yes)
         {
-            System.Windows.Application.Current.Shutdown();
+            _appViewModel.ShowCardEntry();
         }
     }
 }
