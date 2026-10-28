@@ -7,10 +7,10 @@ namespace KostyaBankApp.ViewModels;
 /// </summary>
 public class ServiceViewModel : BaseViewModel
 {
-    private readonly CardRecord _card;
+    private readonly Card _card;
     private string _statusText = "Сервисные операции";
 
-    public ServiceViewModel(CardRecord card)
+    public ServiceViewModel(Card card)
     {
         _card = card ?? throw new ArgumentNullException(nameof(card));
     }

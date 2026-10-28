@@ -9,7 +9,7 @@ namespace KostyaBankApp.ViewModels;
 /// </summary>
 public class CardEntryViewModel : BaseViewModel
 {
-    private readonly CardRepository _repository;
+    private readonly Computer _repository;
     private string _cardNumber = string.Empty;
     private string _statusText = string.Empty;
     private bool _canLogin;
@@ -19,7 +19,7 @@ public class CardEntryViewModel : BaseViewModel
 
     public CardEntryViewModel()
     {
-        _repository = new CardRepository("cards.xlsx");
+        _repository = new Computer("cards.xlsx");
         _loginCommand = new SimpleCommand(ExecuteLogin, () => _canLogin);
         UpdateStatus();
     }

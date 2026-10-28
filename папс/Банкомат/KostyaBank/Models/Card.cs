@@ -6,6 +6,8 @@ namespace KostyaBankApp.Models;
 public class Card
 {
     public string CardNumber { get; set; } = string.Empty;
+    public string HolderName { get; set; } = string.Empty;
+    public decimal Balance { get; set; } = 0;
 
     public bool IsValid
     {

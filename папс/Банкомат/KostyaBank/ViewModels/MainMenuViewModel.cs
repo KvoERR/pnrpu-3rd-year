@@ -9,7 +9,7 @@ namespace KostyaBankApp.ViewModels;
 /// </summary>
 public class MainMenuViewModel : BaseViewModel
 {
-    private readonly CardRecord _card;
+    private readonly Card _card;
     private readonly ICommand _balanceCommand;
     private readonly ICommand _depositCommand;
     private readonly ICommand _withdrawCommand;
@@ -17,7 +17,7 @@ public class MainMenuViewModel : BaseViewModel
     private readonly ICommand _settingsCommand;
     private readonly ICommand _exitCommand;
 
-    public MainMenuViewModel(CardRecord card)
+    public MainMenuViewModel(Card card)
     {
         _card = card ?? throw new ArgumentNullException(nameof(card));
         
@@ -32,8 +32,6 @@ public class MainMenuViewModel : BaseViewModel
     public string CardNumber => _card.CardNumber;
     public string HolderName => _card.HolderName;
     public decimal Balance => _card.Balance;
-
-    public string MaskedCardNumber => _card.MaskedNumber;
 
     public ICommand BalanceCommand => _balanceCommand;
     public ICommand DepositCommand => _depositCommand;

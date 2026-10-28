@@ -5,9 +5,9 @@ namespace KostyaBankApp.Services;
 
 public class NavigationService
 {
-    private readonly CardRecord _card;
+    private readonly Card _card;
 
-    public NavigationService(CardRecord card)
+    public NavigationService(Card card)
     {
         _card = card;
     }

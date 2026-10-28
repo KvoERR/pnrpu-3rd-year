@@ -5,49 +5,29 @@ using Excel = Microsoft.Office.Interop.Excel;
 namespace KostyaBankApp.Models;
 
 /// <summary>
-/// Данные карты из Excel-файла.
-/// </summary>
-public class CardRecord
-{
-    public string CardNumber { get; set; } = string.Empty;
-    public string HolderName { get; set; } = string.Empty;
-    public decimal Balance { get; set; }
-
-    public string MaskedNumber
-    {
-        get
-        {
-            if (CardNumber.Length < 4) return "****";
-            var last4 = CardNumber.Substring(CardNumber.Length - 4);
-            return $"**** **** **** {last4}";
-        }
-    }
-}
-
-/// <summary>
 /// Читает данные карт из Excel-файла или использует встроенную базу.
 /// </summary>
-public class CardRepository
+public class Computer
 {
     private readonly string _filePath;
-    private readonly List<CardRecord> _fallbackCards = new()
+    private readonly List<Card> _fallbackCards = new()
     {
-        new CardRecord { CardNumber = "4276590123456789", HolderName = "Иван Иванов", Balance = 50000 },
-        new CardRecord { CardNumber = "4276590123456790", HolderName = "Мария Петрова", Balance = 120000 }
+        new Card { CardNumber = "4276590123456789", HolderName = "Иван Иванов", Balance = 50000 },
+        new Card { CardNumber = "4276590123456790", HolderName = "Мария Петрова", Balance = 120000 }
     };
 
-    public CardRepository(string filePath)
+    public Computer(string filePath)
     {
         _filePath = filePath;
     }
 
-    public CardRecord? GetCardByNumber(string cardNumber)
+    public Card? GetCardByNumber(string cardNumber)
     {
         var allCards = LoadAllCards();
         return allCards.FirstOrDefault(c => c.CardNumber == cardNumber);
     }
 
-    private List<CardRecord> LoadAllCards()
+    private List<Card> LoadAllCards()
     {
         try
         {
@@ -59,9 +39,9 @@ public class CardRepository
         }
     }
 
-    private List<CardRecord> LoadFromExcel()
+    private List<Card> LoadFromExcel()
     {
-        var cards = new List<CardRecord>();
+        var cards = new List<Card>();
         var excelApp = new Excel.Application();
         Excel.Workbook workbook = null;
 
@@ -84,7 +64,7 @@ public class CardRepository
 
                 if (!string.IsNullOrEmpty(cardNumber))
                 {
-                    cards.Add(new CardRecord
+                    cards.Add(new Card
                     {
                         CardNumber = cardNumber,
                         HolderName = holderName,

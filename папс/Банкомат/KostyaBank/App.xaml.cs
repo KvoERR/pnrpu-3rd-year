@@ -27,17 +27,20 @@ public partial class App : Application
     {
         if (e.Key == Key.S)
         {
-            var repo = new CardRepository("cards.xlsx");
+            var repo = new Computer("cards.xlsx");
             var card = repo.GetCardByNumber("4276590123456789");
 
             if (card != null)
             {
+                var loginWindow = Application.Current.MainWindow;
+
                 var viewModel = new ServiceViewModel(card);
-                var window = new Views.ServiceView(viewModel)
-                {
-                    Owner = Application.Current.MainWindow
-                };
-                window.Show();
+                var serviceWindow = new Views.ServiceView(viewModel);
+
+                loginWindow.Hide();
+                Application.Current.MainWindow = serviceWindow;
+                serviceWindow.Show();
+
                 e.Handled = true;
             }
         }
