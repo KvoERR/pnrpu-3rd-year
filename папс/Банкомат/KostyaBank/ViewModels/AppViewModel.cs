@@ -8,6 +8,7 @@ namespace KostyaBankApp.ViewModels;
 public class AppViewModel : BaseViewModel
 {
     private object _currentView;
+    public MoneyStorage MoneyStorage { get; } = new MoneyStorage();
 
     public object CurrentView
     {

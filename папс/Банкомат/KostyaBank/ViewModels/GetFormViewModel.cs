@@ -10,15 +10,17 @@ namespace KostyaBankApp.ViewModels;
 /// </summary>
 public class GetFormViewModel : CardFormViewModel
 {
-    private readonly ICommand _withdrawCommand;
     private readonly Printer _printer;
+    private readonly AppViewModel _appViewModel;
     private string _withdrawAmount = string.Empty;
+    private ICommand _actionCommand;
 
     public GetFormViewModel(Card card, AppViewModel appViewModel, Printer? printer = null)
         : base(card, appViewModel)
     {
         _printer = printer ?? new Printer();
-        _withdrawCommand = new SimpleCommand(() => Withdraw(), () => CanWithdraw);
+        _appViewModel = appViewModel;
+        _actionCommand = base.ActionCommand;
     }
 
     public override string ActionButtonText => "Снять наличные";
@@ -33,7 +35,8 @@ public class GetFormViewModel : CardFormViewModel
             if (SetProperty(ref _withdrawAmount, value))
             {
                 OnPropertyChanged(nameof(CanWithdraw));
-                ((SimpleCommand)_withdrawCommand).RaiseCanExecuteChanged();
+                OnPropertyChanged(nameof(CanExecuteAction));
+                (_actionCommand as SimpleCommand)?.RaiseCanExecuteChanged();
             }
         }
     }
@@ -50,25 +53,25 @@ public class GetFormViewModel : CardFormViewModel
         }
     }
 
-    public ICommand WithdrawCommand => _withdrawCommand;
-
     protected override void ExecuteAction()
     {
         if (!decimal.TryParse(WithdrawAmount, out var amount))
             return;
-        ShowMessage($"Заявка на снятие {amount:C} принята. Ожидайте выдачи купюр.");
-    }
 
-    private void Withdraw()
-    {
-        if (!decimal.TryParse(WithdrawAmount, out var amount))
-            return;
+        try
+        {
+            // Снимаем из хранилища банкомата
+            _appViewModel.MoneyStorage.TakeMoney((int)amount);
 
-        System.Windows.MessageBox.Show(
-            $"Снятие {amount:C}\n\nЭта функция в разработке.",
-            "Снятие наличных",
-            System.Windows.MessageBoxButton.OK,
-            System.Windows.MessageBoxImage.Information);
+            // Списываем с баланса карты
+            Card.Balance -= amount;
+
+            ShowMessage($"Выдано {amount:C}. Остаток на карте: {Card.Balance:C}");
+        }
+        catch (InvalidOperationException ex)
+        {
+            ShowMessage(ex.Message);
+        }
     }
 
     protected override void OnPrintReceipt()

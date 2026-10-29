@@ -93,6 +93,55 @@
                 </Trigger>
             </Style.Triggers>
         </Style>
+
+        <Style TargetType="DataGrid">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HeadersVisibility" Value="Column"/>
+            <Setter Property="CanUserAddRows" Value="False"/>
+            <Setter Property="CanUserDeleteRows" Value="False"/>
+            <Setter Property="SelectionMode" Value="Extended"/>
+            <Setter Property="IsReadOnly" Value="False"/>
+            <Setter Property="FontSize" Value="14"/>
+        </Style>
+
+        <Style TargetType="DataGridColumnHeader">
+            <Setter Property="Background" Value="#1B5E20"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="10,8"/>
+        </Style>
+
+        <Style TargetType="DataGridCell">
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+
+        <Style TargetType="TextBox" x:Key="CountTextBox">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="BorderBrush" Value="#BDBDBD"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ScrollViewer x:Name="PART_ContentHost" 
+                                        HorizontalAlignment="Center" 
+                                        VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
 
     <Grid Background="#F5F5F5">
@@ -112,7 +161,7 @@
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="40">
                 <!-- Total -->
-                <Border Background="White" CornerRadius="10" Padding="20" Margin="0,0,0,15"
+                <Border Background="White" CornerRadius="10" Padding="20" Margin="0,0,0,20"
                         BorderBrush="#E0E0E0" BorderThickness="1">
                     <StackPanel HorizontalAlignment="Center">
                         <TextBlock Text="Общая сумма в хранилище:" FontSize="14" Foreground="#757575"
@@ -122,26 +171,50 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Nominal selector -->
-                <TextBlock Text="Выберите номинал:" FontSize="14" Foreground="#424242"
-                           Margin="0,0,0,8"/>
-                <ComboBox ItemsSource="{Binding AvailableAmounts}"
-                          SelectedValue="{Binding SelectedAmount}"
-                          Height="40" FontSize="16"
-                          Margin="0,0,0,20"/>
+                <!-- Bills table -->
+                <Border Background="White" CornerRadius="10" Padding="0" Margin="0,0,0,20"
+                        BorderBrush="#E0E0E0" BorderThickness="1">
+                    <DataGrid ItemsSource="{Binding MoneyEntries}"
+                              AutoGenerateColumns="False"
+                              Height="200"
+                              HorizontalAlignment="Center">
+                        <DataGrid.Columns>
+                            <!-- Номинал -->
+                            <DataGridTextColumn Header="Номинал" 
+                                              Binding="{Binding Amount, StringFormat={}{0} руб.}"
+                                              Width="*"
+                                              IsReadOnly="True"/>
 
-                <!-- Load/Unload buttons -->
+                            <!-- Количество -->
+                            <DataGridTemplateColumn Header="Кол-во" Width="*">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding Count, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 Style="{StaticResource CountTextBox}"
+                                                 VerticalAlignment="Center"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <!-- Сумма -->
+                            <DataGridTextColumn Header="Сумма" 
+                                              Binding="{Binding Subtotal, StringFormat={}{0} руб.}"
+                                              Width="*"
+                                              IsReadOnly="True"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+
+                <!-- Action buttons -->
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-                    <Button Content="📥  Загрузить"
+                    <Button Content="📥  Загрузить всё"
                             Style="{StaticResource ResourceKey=ActionButton}"
-                            Command="{Binding LoadCommand}"
-                            IsEnabled="{Binding CanExecuteAction}"
-                            Width="160" Height="44" Margin="0,0,10,0"/>
-                    <Button Content="📤  Выгрузить"
+                            Command="{Binding LoadAllCommand}"
+                            Width="170" Height="44" Margin="0,0,10,0"/>
+                    <Button Content="📤  Выгрузить всё"
                             Style="{StaticResource ResourceKey=ActionButton}"
-                            Command="{Binding UnloadCommand}"
-                            IsEnabled="{Binding CanExecuteAction}"
-                            Width="160" Height="44"/>
+                            Command="{Binding UnloadAllCommand}"
+                            Width="170" Height="44"/>
                 </StackPanel>
 
                 <!-- Clear button -->

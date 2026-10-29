@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using KostyaBankApp.Models;
@@ -6,17 +7,16 @@ using KostyaBankApp.Models;
 namespace KostyaBankApp.ViewModels;
 
 /// <summary>
-/// ViewModel для хранилища денег (загрузка/выгрузка купюр).
+/// ViewModel для хранилища денег (загрузка/выгрузка купюр по номиналам).
 /// </summary>
 public class MoneyStorageViewModel : BaseViewModel
 {
-    private readonly CashStorage _cashStorage;
+    private readonly MoneyStorage _moneyStorage;
     private readonly AppViewModel _appViewModel;
     private readonly ICommand _backCommand;
-    private readonly ICommand _loadCommand;
-    private readonly ICommand _unloadCommand;
+    private readonly ICommand _loadAllCommand;
+    private readonly ICommand _unloadAllCommand;
     private readonly ICommand _clearCommand;
-    private int _selectedAmount;
     private string _statusText = string.Empty;
     private Visibility _statusVisibility = Visibility.Collapsed;
     private string _totalText = "0";
@@ -24,102 +24,113 @@ public class MoneyStorageViewModel : BaseViewModel
     public MoneyStorageViewModel(AppViewModel appViewModel)
     {
         _appViewModel = appViewModel;
-        _cashStorage = new CashStorage();
+        _moneyStorage = appViewModel.MoneyStorage;
         _backCommand = new SimpleCommand(() => _appViewModel.ShowServiceView());
-        _loadCommand = new SimpleCommand(() => LoadMoney(), () => _selectedAmount > 0);
-        _unloadCommand = new SimpleCommand(() => UnloadMoney(), () => _selectedAmount > 0);
-        _clearCommand = new SimpleCommand(() => ClearStorage(), () => _cashStorage.SumMoney() > 0);
-    }
+        _loadAllCommand = new SimpleCommand(() => LoadAllMoney(), () => HasAnyEntries());
+        _unloadAllCommand = new SimpleCommand(() => UnloadAllMoney(), () => HasAnyEntries());
+        _clearCommand = new SimpleCommand(() => ClearStorage(), () => _moneyStorage.SumMoney() > 0);
 
-    public ObservableCollection<int> AvailableAmounts { get; } = new ObservableCollection<int>
-    {
-        50, 100, 200, 500, 1000, 5000
-    };
-
-    public int SelectedAmount
-    {
-        get => _selectedAmount;
-        set
+        // Инициализация коллекции по всем номиналам
+        MoneyEntries = new ObservableCollection<Money>
         {
-            if (SetProperty(ref _selectedAmount, value))
-            {
-                (_loadCommand as SimpleCommand)?.RaiseCanExecuteChanged();
-                (_unloadCommand as SimpleCommand)?.RaiseCanExecuteChanged();
-            }
-        }
+            new Money { Amount = 50 },
+            new Money { Amount = 100 },
+            new Money { Amount = 200 },
+            new Money { Amount = 500 },
+            new Money { Amount = 1000 },
+            new Money { Amount = 5000 }
+        };
+
+        // Подписка на изменения Count
+        foreach (var money in MoneyEntries)
+            money.PropertyChanged += OnMoneyEntryChanged;
+
+        ReloadFromExcel();
+        UpdateTotal();
     }
 
-    public string TotalText
-    {
-        get => _totalText;
-        private set => SetProperty(ref _totalText, value);
-    }
+    public ObservableCollection<Money> MoneyEntries { get; }
 
-    public string StatusText
-    {
-        get => _statusText;
-        private set => SetProperty(ref _statusText, value);
-    }
-
-    public Visibility StatusVisibility
-    {
-        get => _statusVisibility;
-        private set => SetProperty(ref _statusVisibility, value);
-    }
-
-    public bool CanExecuteAction => _selectedAmount > 0;
-    public bool CanExecuteClear => _cashStorage.SumMoney() > 0;
+    public string TotalText { get => _totalText; private set => SetProperty(ref _totalText, value); }
+    public string StatusText { get => _statusText; private set => SetProperty(ref _statusText, value); }
+    public Visibility StatusVisibility { get => _statusVisibility; private set => SetProperty(ref _statusVisibility, value); }
 
     public ICommand BackCommand => _backCommand;
-    public ICommand LoadCommand => _loadCommand;
-    public ICommand UnloadCommand => _unloadCommand;
+    public ICommand LoadAllCommand => _loadAllCommand;
+    public ICommand UnloadAllCommand => _unloadAllCommand;
     public ICommand ClearCommand => _clearCommand;
 
-    private void LoadMoney()
+    private void OnMoneyEntryChanged(object sender, PropertyChangedEventArgs e)
     {
-        for (int i = 0; i < 5; i++)
+        if (e.PropertyName == nameof(Money.Count))
         {
-            _cashStorage.Money.Add(new Money { Amount = SelectedAmount });
+            (_loadAllCommand as SimpleCommand)?.RaiseCanExecuteChanged();
+            (_unloadAllCommand as SimpleCommand)?.RaiseCanExecuteChanged();
         }
-        UpdateTotal();
-        StatusText = $"Загружено 5 купюр по {SelectedAmount} руб.";
+    }
+
+    private bool HasAnyEntries() => MoneyEntries.Any(m => m.Count > 0);
+
+    private void LoadAllMoney()
+    {
+        var details = new List<string>();
+        foreach (var money in MoneyEntries)
+        {
+            if (money.Count > 0)
+            {
+                _moneyStorage.AddMoney(money.Amount, money.Count);
+                details.Add($"{money.Count} × {money.Amount} руб.");
+                money.Count = 0; // Сброс после загрузки
+            }
+        }
+        ReloadFromExcel();
+        StatusText = $"Загружено: {string.Join(", ", details)}";
         StatusVisibility = Visibility.Visible;
     }
 
-    private void UnloadMoney()
+    private void UnloadAllMoney()
     {
-        int count = 0;
-        for (int i = _cashStorage.Money.Count - 1; i >= 0 && count < 5; i--)
+        var details = new List<string>();
+        foreach (var money in MoneyEntries)
         {
-            if (_cashStorage.Money[i].Amount == SelectedAmount)
+            if (money.Count > 0)
             {
-                _cashStorage.Money.RemoveAt(i);
-                count++;
+                int available = _moneyStorage.GetCountByNominal(money.Amount);
+                int toUnload = Math.Min(money.Count, available);
+                if (toUnload == 0) continue;
+                _moneyStorage.RemoveMoney(money.Amount, toUnload);
+                details.Add($"{toUnload} × {money.Amount} руб.");
+                money.Count -= toUnload; // Уменьшаем на невыгруженное
             }
         }
-
-        if (count == 0)
+        if (details.Count > 0)
         {
-            StatusText = $"В хранилище нет купюр номиналом {SelectedAmount} руб.";
+            ReloadFromExcel();
+            StatusText = $"Выгружено: {string.Join(", ", details)}";
             StatusVisibility = Visibility.Visible;
-            return;
         }
-
-        UpdateTotal();
-        StatusText = $"Выгружено {count} купюр по {SelectedAmount} руб.";
-        StatusVisibility = Visibility.Visible;
     }
 
     private void ClearStorage()
     {
-        int total = _cashStorage.ClearStorage();
-        UpdateTotal();
+        int total = _moneyStorage.ClearStorage();
+        ReloadFromExcel();
         StatusText = $"Хранилище очищено. Выгружено {total} руб.";
         StatusVisibility = Visibility.Visible;
     }
 
-    private void UpdateTotal()
+    private void UpdateTotal() => TotalText = _moneyStorage.SumMoney().ToString();
+
+    /// <summary>
+    /// Перезагружает Count из MoneyStorage (Excel) в MoneyEntries.
+    /// </summary>
+    private void ReloadFromExcel()
     {
-        TotalText = _cashStorage.SumMoney().ToString();
+        _moneyStorage.ReloadFromExcel();
+        foreach (var money in MoneyEntries)
+        {
+            money.Count = _moneyStorage.GetCountByNominal(money.Amount);
+        }
+        UpdateTotal();
     }
 }

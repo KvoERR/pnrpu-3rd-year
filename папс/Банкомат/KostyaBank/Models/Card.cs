@@ -8,6 +8,7 @@ public class Card
     public string CardNumber { get; set; } = string.Empty;
     public string HolderName { get; set; } = string.Empty;
     public decimal Balance { get; set; } = 0;
+    public string PinCode { get; set; } = string.Empty;
 
     public bool IsValid
     {

@@ -151,19 +151,11 @@
                     </ListView>
                 </Border>
 
-                <!-- Export/Clear buttons -->
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
-                    <Button Content="📋  Выгрузить"
-                            Style="{StaticResource ResourceKey=ActionButton}"
-                            Command="{Binding ExportCommand}"
-                            IsEnabled="{Binding CanExecuteExport}"
-                            Width="160" Height="44" Margin="0,0,10,0"/>
-                    <Button Content="🗑  Очистить всё"
+                <Button Content="🗑  Очистить всё"
                             Style="{StaticResource ResourceKey=DangerButton}"
                             Command="{Binding ClearCommand}"
                             IsEnabled="{Binding CanExecuteClear}"
                             Width="160" Height="44"/>
-                </StackPanel>
 
                 <!-- Status message -->
                 <Border Background="#E3F2FD" CornerRadius="6" Padding="10"

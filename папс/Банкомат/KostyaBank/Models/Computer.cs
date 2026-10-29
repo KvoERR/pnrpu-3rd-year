@@ -7,6 +7,7 @@ namespace KostyaBankApp.Models;
 
 /// <summary>
 /// Читает данные карт из Excel-файла с помощью EPPlus.
+/// Формат Excel: Номер карты | Имя владельца | Баланс | PIN-код
 /// </summary>
 public class Computer
 {
@@ -14,7 +15,6 @@ public class Computer
 
     public Computer()
     {
-        // Ищем файл рядом с исполняемым файлом
         var exeDir = AppDomain.CurrentDomain.BaseDirectory;
         _filePath = Path.Combine(exeDir, "comp.xlsx");
     }
@@ -30,9 +30,7 @@ public class Computer
         var cards = new List<Card>();
 
         if (!File.Exists(_filePath))
-        {
             return cards;
-        }
 
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
@@ -49,12 +47,14 @@ public class Computer
 
             var holderName = worksheet.Cells[row, 2].Value?.ToString() ?? string.Empty;
             var balanceStr = worksheet.Cells[row, 3].Value?.ToString();
+            var pinCode = worksheet.Cells[row, 4].Value?.ToString() ?? string.Empty;
 
             cards.Add(new Card
             {
                 CardNumber = cardNumber,
                 HolderName = holderName,
-                Balance = decimal.TryParse(balanceStr, out var bal) ? bal : 0
+                Balance = decimal.TryParse(balanceStr, out var bal) ? bal : 0,
+                PinCode = pinCode
             });
 
             row++;
