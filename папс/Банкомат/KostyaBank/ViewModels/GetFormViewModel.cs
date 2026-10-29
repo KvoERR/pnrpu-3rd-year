@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO;
 using System.Windows.Input;
 using KostyaBankApp.Models;
 
@@ -73,6 +74,9 @@ public class GetFormViewModel : CardFormViewModel
     protected override void OnPrintReceipt()
     {
         if (decimal.TryParse(WithdrawAmount, out var amount))
-            _printer.ShowWithdrawDoc(amount, Card, DateTime.Now);
+        {
+            var filePath = _printer.SaveWithdrawDoc(amount, Card, DateTime.Now);
+            ShowMessage($"Чек сохранён в Output: {Path.GetFileName(filePath)}");
+        }
     }
 }

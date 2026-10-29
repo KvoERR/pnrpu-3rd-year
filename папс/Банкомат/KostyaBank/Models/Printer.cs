@@ -1,18 +1,20 @@
 using System.Globalization;
+using System.IO;
 using System.Text;
-using System.Windows;
 
 namespace KostyaBankApp.Models;
 
 /// <summary>
-/// Принтер для формирования и отображения чека/справки.
+/// Принтер для формирования и сохранения чека/справки в текстовый файл.
 /// </summary>
 public class Printer
 {
+    private readonly string _outputPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Output");
+
     /// <summary>
-    /// Формирует чек операции снятия наличных.
+    /// Формирует чек операции снятия наличных и сохраняет в файл.
     /// </summary>
-    public void ShowWithdrawDoc(decimal amount, Card card, DateTime transactionDate)
+    public string SaveWithdrawDoc(decimal amount, Card card, DateTime transactionDate)
     {
         var sb = new StringBuilder();
 
@@ -35,17 +37,18 @@ public class Printer
         sb.AppendLine("  Спасибо за использование KostyaBank!");
         sb.AppendLine("========================================");
 
-        MessageBox.Show(
-            sb.ToString(),
-            "Чек: Снятие наличных",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
+        Directory.CreateDirectory(_outputPath);
+        var fileName = $"withdraw_{card.CardNumber}_{transactionDate:yyyyMMdd_HHmmss}.txt";
+        var filePath = Path.Combine(_outputPath, fileName);
+        File.WriteAllText(filePath, sb.ToString(), Encoding.UTF8);
+
+        return filePath;
     }
 
     /// <summary>
-    /// Формирует справку о балансе карты.
+    /// Формирует справку о балансе карты и сохраняет в файл.
     /// </summary>
-    public void ShowBalanceDoc(Card card, DateTime transactionDate)
+    public string SaveBalanceDoc(Card card, DateTime transactionDate)
     {
         var sb = new StringBuilder();
 
@@ -68,10 +71,11 @@ public class Printer
         sb.AppendLine("  Спасибо за использование KostyaBank!");
         sb.AppendLine("========================================");
 
-        MessageBox.Show(
-            sb.ToString(),
-            "Справка: Баланс карты",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
+        Directory.CreateDirectory(_outputPath);
+        var fileName = $"balance_{card.CardNumber}_{transactionDate:yyyyMMdd_HHmmss}.txt";
+        var filePath = Path.Combine(_outputPath, fileName);
+        File.WriteAllText(filePath, sb.ToString(), Encoding.UTF8);
+
+        return filePath;
     }
 }

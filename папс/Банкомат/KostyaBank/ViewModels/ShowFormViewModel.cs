@@ -1,3 +1,4 @@
+using System.IO;
 using KostyaBankApp.Models;
 
 namespace KostyaBankApp.ViewModels;
@@ -26,6 +27,7 @@ public class ShowFormViewModel : CardFormViewModel
 
     protected override void OnPrintReceipt()
     {
-        _printer.ShowBalanceDoc(Card, DateTime.Now);
+        var filePath = _printer.SaveBalanceDoc(Card, DateTime.Now);
+        ShowMessage($"Справка сохранена в Output: {Path.GetFileName(filePath)}");
     }
 }
