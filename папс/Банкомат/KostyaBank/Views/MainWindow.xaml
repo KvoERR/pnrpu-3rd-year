@@ -24,6 +24,12 @@
         <DataTemplate DataType="{x:Type vm:GetFormViewModel}">
             <views:GetFormView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:MoneyStorageViewModel}">
+            <views:MoneyStorageView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:CardStorageViewModel}">
+            <views:CardStorageView />
+        </DataTemplate>
     </Window.Resources>
 
     <Grid Background="#F5F5F5">

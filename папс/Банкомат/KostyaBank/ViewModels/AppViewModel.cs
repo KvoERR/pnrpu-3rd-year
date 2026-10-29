@@ -57,6 +57,16 @@ public class AppViewModel : BaseViewModel
         }
     }
 
+    public void ShowMoneyStorage()
+    {
+        CurrentView = new MoneyStorageViewModel(this);
+    }
+
+    public void ShowCardStorage()
+    {
+        CurrentView = new CardStorageViewModel(this);
+    }
+
     public void ExitApp()
     {
         var result = System.Windows.MessageBox.Show(

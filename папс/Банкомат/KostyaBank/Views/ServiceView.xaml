@@ -73,14 +73,14 @@
         <!-- Menu Buttons -->
         <StackPanel Grid.Row="0" Margin="20,20">
             <Button Content="💰  Хранилище денег" Style="{StaticResource ResourceKey=MenuButton}"
-                    Command="{Binding }"/>
+                    Command="{Binding MoneyStorageCommand}"/>
             <Button Content="🏧  Хранилище карт" Style="{StaticResource ResourceKey=MenuButton}"
-                    Command="{Binding GetCommand}"/>
+                    Command="{Binding CardStorageCommand}"/>
         </StackPanel>
 
         <!-- Exit -->
         <Button Grid.Row="1" Content="🚪  Выйти из аккаунта"
                 Style="{StaticResource ResourceKey=ExitButton}"
-                Command="{Binding ExitCommand}"/>
+                Command="{Binding BackCommand}"/>
     </Grid>
 </UserControl>

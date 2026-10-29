@@ -1,15 +1,15 @@
-using System.Collections.Generic;
-using System.Linq;
-
 namespace KostyaBankApp.Models;
 
+/// <summary>
+/// Хранилище денег банкомата (наличные в купюрах).
+/// </summary>
 public class CashStorage
 {
-    public List<Money> money = new List<Money>();
+    public List<Money> Money { get; } = new List<Money>();
 
     public int SumMoney()
     {
-        return money.Sum(m => m.Amount);
+        return Money.Sum(m => m.Amount);
     }
 
     public int GetCash()
@@ -22,7 +22,7 @@ public class CashStorage
     public int ClearStorage()
     {
         int total = SumMoney();
-        money.Clear();
+        Money.Clear();
         return total;
     }
 
@@ -34,7 +34,7 @@ public class CashStorage
         int remaining = amount;
         var billsToTake = new List<Money>();
 
-        foreach (var bill in money.OrderByDescending(m => m.Amount))
+        foreach (var bill in Money.OrderByDescending(m => m.Amount))
         {
             if (remaining <= 0) break;
 
@@ -50,9 +50,8 @@ public class CashStorage
             throw new InvalidOperationException("Невозможно выдать указанную сумму доступными номиналами");
 
         foreach (var bill in billsToTake)
-            money.Remove(bill);
+            Money.Remove(bill);
 
         return amount;
     }
 }
-
