@@ -1,6 +1,68 @@
 <UserControl x:Class="KostyaBankApp.Views.ServiceView"
-              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:KostyaBankApp.ViewModels">
+
+    <UserControl.Resources>
+        <Style TargetType="Button" x:Key="MenuButton">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="#1B5E20"/>
+            <Setter Property="BorderBrush" Value="#E0E0E0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="20,15"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="0,5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#E8F5E9"/>
+                    <Setter Property="BorderBrush" Value="#1B5E20"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style TargetType="Button" x:Key="ExitButton">
+            <Setter Property="Background" Value="#C62828"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#C62828"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Margin" Value="0,20,0,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#E53935"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
 
     <Grid Background="#F5F5F5">
         <Grid.RowDefinitions>
@@ -8,17 +70,17 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Back button -->
-        <Button Grid.Row="0"
-                Content="← Назад"
-                Margin="20"
-                Padding="20,10"
-                Background="#E0E0E0"
-                Foreground="#333333"
-                FontSize="14"
-                FontWeight="SemiBold"
-                BorderThickness="0"
-                Cursor="Hand"
-                Command="{Binding BackCommand}"/>
+        <!-- Menu Buttons -->
+        <StackPanel Grid.Row="0" Margin="20,20">
+            <Button Content="💰  Хранилище денег" Style="{StaticResource ResourceKey=MenuButton}"
+                    Command="{Binding }"/>
+            <Button Content="🏧  Хранилище карт" Style="{StaticResource ResourceKey=MenuButton}"
+                    Command="{Binding GetCommand}"/>
+        </StackPanel>
+
+        <!-- Exit -->
+        <Button Grid.Row="1" Content="🚪  Выйти из аккаунта"
+                Style="{StaticResource ResourceKey=ExitButton}"
+                Command="{Binding ExitCommand}"/>
     </Grid>
 </UserControl>

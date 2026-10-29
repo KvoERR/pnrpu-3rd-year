@@ -7,9 +7,12 @@ namespace KostyaBankApp.ViewModels;
 /// </summary>
 public class ShowFormViewModel : CardFormViewModel
 {
-    public ShowFormViewModel(Card card, AppViewModel appViewModel)
+    private readonly Printer _printer;
+
+    public ShowFormViewModel(Card card, AppViewModel appViewModel, Printer? printer = null)
         : base(card, appViewModel)
     {
+        _printer = printer ?? new Printer();
     }
 
     public override string ActionButtonText => "Обновить баланс";
@@ -19,5 +22,10 @@ public class ShowFormViewModel : CardFormViewModel
     protected override void ExecuteAction()
     {
         ShowMessage($"Баланс: {Balance:C} — актуально на текущий момент.");
+    }
+
+    protected override void OnPrintReceipt()
+    {
+        _printer.ShowBalanceDoc(Card, DateTime.Now);
     }
 }

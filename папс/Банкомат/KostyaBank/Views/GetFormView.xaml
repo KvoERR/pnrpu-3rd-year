@@ -12,12 +12,12 @@
                                Foreground="#1B5E20" Margin="0,0,0,15"/>
                     <TextBlock Text="Введите сумму снятия" FontWeight="SemiBold" Foreground="#424242" Margin="0,0,0,8"/>
                     <TextBox Text="{Binding WithdrawAmount, UpdateSourceTrigger=PropertyChanged}"
-                             FontSize="18" FontWeight="SemiBold"
-                             Padding="12,10"
-                             BorderBrush="#BDBDBD" BorderThickness="1"
-                             FontFamily="Consolas, 'Courier New'"
-                             HorizontalAlignment="Stretch"
-                             Margin="0,0,0,15"/>
+                              FontSize="18" FontWeight="SemiBold"
+                              Padding="12,10"
+                              BorderBrush="#BDBDBD" BorderThickness="1"
+                              FontFamily="Consolas, 'Courier New'"
+                              HorizontalAlignment="Stretch"
+                              Margin="0,0,0,15"/>
                 </StackPanel>
             </DataTemplate>
         </views:CardFormView.ContentTemplate>

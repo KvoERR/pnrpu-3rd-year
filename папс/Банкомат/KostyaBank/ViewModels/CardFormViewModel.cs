@@ -16,6 +16,7 @@ public abstract class CardFormViewModel : BaseViewModel
     private readonly ICommand _actionCommand;
     private string _messageText = string.Empty;
     private Visibility _messageVisibility = Visibility.Collapsed;
+    private bool _printReceipt;
 
     protected CardFormViewModel(Card card, AppViewModel appViewModel)
     {
@@ -23,7 +24,12 @@ public abstract class CardFormViewModel : BaseViewModel
         AppViewModel = appViewModel;
 
         _backCommand = new SimpleCommand(() => AppViewModel.ShowMainMenu(Card));
-        _actionCommand = new SimpleCommand(() => ExecuteAction(), () => CanExecuteAction);
+        _actionCommand = new SimpleCommand(() =>
+        {
+            ExecuteAction();
+            if (PrintReceipt)
+                OnPrintReceipt();
+        }, () => CanExecuteAction);
     }
 
     // Card info
@@ -64,5 +70,20 @@ public abstract class CardFormViewModel : BaseViewModel
     {
         MessageText = string.Empty;
         MessageVisibility = Visibility.Collapsed;
+    }
+
+    public bool PrintReceipt
+    {
+        get => _printReceipt;
+        set => SetProperty(ref _printReceipt, value);
+    }
+
+    /// <summary>
+    /// Вызывается при нажатии кнопки действия, если включена печать чека.
+    /// Переопределяется в наследниках для формирования своего чека.
+    /// </summary>
+    protected virtual void OnPrintReceipt()
+    {
+        // По умолчанию ничего не печатает
     }
 }

@@ -10,11 +10,13 @@ namespace KostyaBankApp.ViewModels;
 public class GetFormViewModel : CardFormViewModel
 {
     private readonly ICommand _withdrawCommand;
+    private readonly Printer _printer;
     private string _withdrawAmount = string.Empty;
 
-    public GetFormViewModel(Card card, AppViewModel appViewModel)
+    public GetFormViewModel(Card card, AppViewModel appViewModel, Printer? printer = null)
         : base(card, appViewModel)
     {
+        _printer = printer ?? new Printer();
         _withdrawCommand = new SimpleCommand(() => Withdraw(), () => CanWithdraw);
     }
 
@@ -60,10 +62,17 @@ public class GetFormViewModel : CardFormViewModel
     {
         if (!decimal.TryParse(WithdrawAmount, out var amount))
             return;
+
         System.Windows.MessageBox.Show(
             $"Снятие {amount:C}\n\nЭта функция в разработке.",
             "Снятие наличных",
             System.Windows.MessageBoxButton.OK,
             System.Windows.MessageBoxImage.Information);
+    }
+
+    protected override void OnPrintReceipt()
+    {
+        if (decimal.TryParse(WithdrawAmount, out var amount))
+            _printer.ShowWithdrawDoc(amount, Card, DateTime.Now);
     }
 }
