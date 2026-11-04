@@ -16,6 +16,8 @@
         <local:BoolToVisibilityConverter x:Key="BoolToVisibility"/>
         <local:IndexToVisibilityConverter x:Key="IndexToVisibility"/>
         <local:OffsetConverter x:Key="OffsetConverter"/>
+        <local:ProjectXConverter x:Key="ProjectXConverter"/>
+        <local:ProjectYConverter x:Key="ProjectYConverter"/>
 
         <DataTemplate x:Key="ShapeTemplate">
             <Canvas>
@@ -57,8 +59,24 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemContainerStyle>
                         <Style TargetType="ContentPresenter">
-                            <Setter Property="Canvas.Left" Value="{Binding X}"/>
-                            <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                            <Setter Property="Canvas.Left">
+                                <Setter.Value>
+                                    <MultiBinding Converter="{StaticResource ProjectXConverter}">
+                                        <Binding Path="X"/>
+                                        <Binding Path="DataContext.Bounds.X" RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                                        <Binding Path="Z"/>
+                                    </MultiBinding>
+                                </Setter.Value>
+                            </Setter>
+                            <Setter Property="Canvas.Top">
+                                <Setter.Value>
+                                    <MultiBinding Converter="{StaticResource ProjectYConverter}">
+                                        <Binding Path="Y"/>
+                                        <Binding Path="DataContext.Bounds.Y" RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                                        <Binding Path="Z"/>
+                                    </MultiBinding>
+                                </Setter.Value>
+                            </Setter>
                         </Style>
                     </ItemsControl.ItemContainerStyle>
                     <ItemsControl.ItemTemplate>
@@ -80,33 +98,6 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-
-                <!-- Рамка выделения фигуры / группы -->
-                <Rectangle Stroke="Blue" StrokeThickness="2"
-                           StrokeDashArray="4,2" Fill="Transparent"
-                           Visibility="{Binding DataContext.SelectedShapes.Count, Converter={StaticResource BoolToVisibility}, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
-                    <Rectangle.Style>
-                        <Style TargetType="Rectangle">
-                            <Setter Property="Width" Value="{Binding DataContext.SelectedBounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
-                            <Setter Property="Height" Value="{Binding DataContext.SelectedBounds.Height, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
-                            <Setter Property="Canvas.Left" Value="{Binding DataContext.SelectedBounds.X, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
-                            <Setter Property="Canvas.Top" Value="{Binding DataContext.SelectedBounds.Y, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
-                        </Style>
-                    </Rectangle.Style>
-                </Rectangle>
-
-                <!-- Рамка выделенной точки -->
-                <Rectangle Stroke="Red" StrokeThickness="2"
-                           Visibility="{Binding SelectedPointIndex, Converter={StaticResource IndexToVisibility}}">
-                    <Rectangle.Style>
-                        <Style TargetType="Rectangle">
-                            <Setter Property="Width" Value="14"/>
-                            <Setter Property="Height" Value="14"/>
-                            <Setter Property="Canvas.Left" Value="{Binding Bounds.X, Converter={StaticResource OffsetConverter}}"/>
-                            <Setter Property="Canvas.Top" Value="{Binding Bounds.Y, Converter={StaticResource OffsetConverter}}"/>
-                        </Style>
-                    </Rectangle.Style>
-                </Rectangle>
             </Canvas>
         </DataTemplate>
 
@@ -149,8 +140,24 @@
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemContainerStyle>
                                         <Style TargetType="ContentPresenter">
-                                            <Setter Property="Canvas.Left" Value="{Binding X}"/>
-                                            <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                            <Setter Property="Canvas.Left">
+                                                <Setter.Value>
+                                                    <MultiBinding Converter="{StaticResource ProjectXConverter}">
+                                                        <Binding Path="X"/>
+                                                        <Binding Path="DataContext.Bounds.X" RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                                                        <Binding Path="Z"/>
+                                                    </MultiBinding>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Setter Property="Canvas.Top">
+                                                <Setter.Value>
+                                                    <MultiBinding Converter="{StaticResource ProjectYConverter}">
+                                                        <Binding Path="Y"/>
+                                                        <Binding Path="DataContext.Bounds.Y" RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                                                        <Binding Path="Z"/>
+                                                    </MultiBinding>
+                                                </Setter.Value>
+                                            </Setter>
                                         </Style>
                                     </ItemsControl.ItemContainerStyle>
                                     <ItemsControl.ItemTemplate>
@@ -174,15 +181,6 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-
-                <!-- Рамка выделения группы -->
-                <Rectangle Stroke="Green" StrokeThickness="2"
-                           StrokeDashArray="6,3" Fill="Transparent"
-                           Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}"
-                           Width="{Binding Bounds.Width}"
-                           Height="{Binding Bounds.Height}"
-                           Canvas.Left="{Binding Bounds.X}"
-                           Canvas.Top="{Binding Bounds.Y}"/>
 
                 <!-- Прозрачная подложка для клика по группе (всегда сверху) -->
                 <Rectangle Fill="Transparent"
@@ -302,43 +300,127 @@
                 <TextBlock Grid.Row="0" Text="Свойства" FontWeight="Bold" Margin="10"/>
                 <ScrollViewer Grid.Row="1" Margin="5" VerticalScrollBarVisibility="Auto">
                     <StackPanel>
-                        <TextBlock Text="{Binding SelectedItemDisplayName, FallbackValue='Не выбрано'}"
-                                   Margin="5,0"/>
-
-                        <!-- Свойства группы -->
-                        <Border Background="#E8F5E9" BorderBrush="Green" BorderThickness="1" CornerRadius="3" Margin="0,5,0,0"
-                                Visibility="{Binding SelectedGroup, Converter={StaticResource BoolToVisibility}}">
+                        <!-- Трансформации фигуры -->
+                        <Border Background="#E3F2FD" BorderBrush="Blue" BorderThickness="1" CornerRadius="3" Margin="5,0">
                             <StackPanel Margin="10">
-                                <TextBlock Text="Группа" FontWeight="Bold" Margin="0,0,0,5"/>
-                                <TextBlock Text="{Binding SelectedGroup.ChildShapes.Count, StringFormat='Фигур: {0}'}" Margin="0,3"/>
-                                <TextBlock Text="Выделите фигуру внутри группы для редактирования точек" 
-                                           FontSize="11" Foreground="Gray" Margin="0,8,0,0"/>
+                                <TextBlock Text="Трансформация" FontWeight="Bold" Margin="0,0,0,5"/>
+                                <TextBlock Text="Введите число и нажмите кнопку:" FontSize="10" Foreground="Gray" Margin="0,0,0,8"/>
+
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="40"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Сдвиг X:" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding MoveX, StringFormat={}{0:F2}, UpdateSourceTrigger=PropertyChanged}"
+                                             Margin="5,0"/>
+                                    <Button Grid.Column="2" Content="→" Command="{Binding MoveXCommand}" Padding="5,0" Margin="3,0"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="40"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Сдвиг Y:" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding MoveY, StringFormat={}{0:F2}, UpdateSourceTrigger=PropertyChanged}"
+                                             Margin="5,0"/>
+                                    <Button Grid.Column="2" Content="→" Command="{Binding MoveYCommand}" Padding="5,0" Margin="3,0"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="40"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Сдвиг Z:" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding MoveZ, StringFormat={}{0:F2}, UpdateSourceTrigger=PropertyChanged}"
+                                             Margin="5,0"/>
+                                    <Button Grid.Column="2" Content="→" Command="{Binding MoveZCommand}" Padding="5,0" Margin="3,0"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="40"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Угол (°):" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding RotateAngle, StringFormat={}{0:F2}, UpdateSourceTrigger=PropertyChanged}"
+                                             Margin="5,0"/>
+                                    <Button Grid.Column="2" Content="→" Command="{Binding RotateAngleCommand}" Padding="5,0" Margin="3,0"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="40"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Поворот Y:" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding RotateY, StringFormat={}{0:F2}, UpdateSourceTrigger=PropertyChanged}"
+                                             Margin="5,0"/>
+                                    <Button Grid.Column="2" Content="→" Command="{Binding RotateYCommand}" Padding="5,0" Margin="3,0"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="40"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Масштаб X:" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding ScaleX, StringFormat={}{0:F2}, UpdateSourceTrigger=PropertyChanged}"
+                                             Margin="5,0"/>
+                                    <Button Grid.Column="2" Content="→" Command="{Binding ScaleXCommand}" Padding="5,0" Margin="3,0"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="40"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Масштаб Y:" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding ScaleY, StringFormat={}{0:F2}, UpdateSourceTrigger=PropertyChanged}"
+                                             Margin="5,0"/>
+                                    <Button Grid.Column="2" Content="→" Command="{Binding ScaleYCommand}" Padding="5,0" Margin="3,0"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="40"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Масштаб Z:" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding ScaleZ, StringFormat={}{0:F2}, UpdateSourceTrigger=PropertyChanged}"
+                                             Margin="5,0"/>
+                                    <Button Grid.Column="2" Content="→" Command="{Binding ScaleZCommand}" Padding="5,0" Margin="3,0"/>
+                                </Grid>
                             </StackPanel>
                         </Border>
 
-                        <!-- Точки фигуры -->
-                        <TextBlock Text="Точки фигуры:" FontWeight="Bold" Margin="0,10,0,5"
-                                   Visibility="{Binding SelectedShape, Converter={StaticResource BoolToVisibility}}"/>
-                        <ListBox ItemsSource="{Binding SelectedShape.PointViewModels}"
-                                 SelectedItem="{Binding SelectedShape.SelectedPoint}"
-                                 Margin="5"
-                                 Visibility="{Binding SelectedShape, Converter={StaticResource BoolToVisibility}}">
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding X, StringFormat={}{0:F0}}"/>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-
                         <!-- Свойства выбранной точки -->
-                        <Border Background="#F0F0F0" BorderBrush="Gray" BorderThickness="1" CornerRadius="3" Margin="0,5,0,0"
+                        <Border Background="#F0F0F0" BorderBrush="Gray" BorderThickness="1" CornerRadius="3" Margin="5,10,5,0"
                                 Visibility="{Binding SelectedShape, Converter={StaticResource BoolToVisibility}}">
                             <StackPanel Margin="10">
                                 <TextBlock Text="Выбранная точка:" FontWeight="Bold" Margin="0,0,0,5"/>
 
-                                <Grid Margin="5,0">
+                                <Grid Margin="0,0,0,5">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="30"/>
+                                        <ColumnDefinition Width="20"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="X:" VerticalAlignment="Center"/>
@@ -346,9 +428,9 @@
                                              Text="{Binding SelectedShape.SelectedPoint.X, StringFormat={}{0:F2}, UpdateSourceTrigger=PropertyChanged}"
                                              Margin="5,0"/>
                                 </Grid>
-                                <Grid Margin="5,0">
+                                <Grid Margin="0,0,0,5">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="30"/>
+                                        <ColumnDefinition Width="20"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="Y:" VerticalAlignment="Center"/>
@@ -356,25 +438,30 @@
                                              Text="{Binding SelectedShape.SelectedPoint.Y, StringFormat={}{0:F2}, UpdateSourceTrigger=PropertyChanged}"
                                              Margin="5,0"/>
                                 </Grid>
-
-                                <TextBlock Text="Цвет:" Margin="0,10,0,5"/>
-                                <Grid Margin="5,0">
+                                <Grid Margin="0,0,0,5">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="40"/>
+                                        <ColumnDefinition Width="20"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <Rectangle Width="30" Height="20" Margin="5,0"
-                                               Fill="{Binding SelectedShape.SelectedPoint.Fill, Mode=OneWay}"
-                                               Stroke="Gray" StrokeThickness="1"/>
-                                    <TextBlock Grid.Column="1"
-                                               Text="{Binding SelectedShape.SelectedPoint.Fill, StringFormat={}{0}, Mode=OneWay}"
-                                               VerticalAlignment="Center" Margin="5,0"/>
+                                    <TextBlock Text="Z:" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding SelectedShape.SelectedPoint.Z, StringFormat={}{0:F2}, UpdateSourceTrigger=PropertyChanged}"
+                                             Margin="5,0"/>
                                 </Grid>
 
-                                <TextBlock Text="Размер:" Margin="0,10,0,5"/>
+                                <TextBlock Text="Размер:" Margin="0,5,0,0"/>
                                 <TextBox Grid.Column="1"
                                          Text="{Binding SelectedShape.SelectedPoint.Radius, StringFormat={}{0:F2}, UpdateSourceTrigger=PropertyChanged}"
-                                         Margin="5,0"/>
+                                         Margin="0,0,0,5"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Свойства группы -->
+                        <Border Background="#E8F5E9" BorderBrush="Green" BorderThickness="1" CornerRadius="3" Margin="5,10,5,0"
+                                Visibility="{Binding SelectedGroup, Converter={StaticResource BoolToVisibility}}">
+                            <StackPanel Margin="10">
+                                <TextBlock Text="Группа" FontWeight="Bold" Margin="0,0,0,5"/>
+                                <TextBlock Text="{Binding SelectedGroup.ChildShapes.Count, StringFormat='Фигур: {0}'}" Margin="0,3"/>
                             </StackPanel>
                         </Border>
                     </StackPanel>

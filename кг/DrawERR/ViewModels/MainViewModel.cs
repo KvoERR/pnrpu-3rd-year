@@ -24,6 +24,15 @@ namespace DrawERR.ViewModels
         private ShapeType _selectedShapeType;
         private static readonly Random _random = new Random();
 
+        private double _moveX;
+        private double _moveY;
+        private double _moveZ;
+        private double _rotateAngle;
+        private double _rotateY;
+        private double _scaleX;
+        private double _scaleY;
+        private double _scaleZ;
+
         public MainViewModel()
         {
             _shapes = new ObservableCollection<ShapeViewModel>();
@@ -53,7 +62,73 @@ namespace DrawERR.ViewModels
             GroupCommand = new RelayCommand(Group, param => _selectedShapes.Count >= 2);
             UngroupCommand = new RelayCommand(Ungroup, param => _selectedGroup != null);
             DeselectAllCommand = new RelayCommand(DeselectAll);
+
+            MoveXCommand = new RelayCommand(MoveXByAmount, param => _selectedShapes.Count > 0);
+            MoveYCommand = new RelayCommand(MoveYByAmount, param => _selectedShapes.Count > 0);
+            MoveZCommand = new RelayCommand(MoveZByAmount, param => _selectedShapes.Count > 0);
+            RotateAngleCommand = new RelayCommand(RotateByAngle, param => _selectedShapes.Count > 0);
+            RotateYCommand = new RelayCommand(RotateYByAngle, param => _selectedShapes.Count > 0);
+            ScaleXCommand = new RelayCommand(ScaleXByAmount, param => _selectedShapes.Count > 0);
+            ScaleYCommand = new RelayCommand(ScaleYByAmount, param => _selectedShapes.Count > 0);
+            ScaleZCommand = new RelayCommand(ScaleZByAmount, param => _selectedShapes.Count > 0);
         }
+
+        public double MoveX
+        {
+            get => _moveX;
+            set { _moveX = value; OnPropertyChanged(); }
+        }
+
+        public double MoveY
+        {
+            get => _moveY;
+            set { _moveY = value; OnPropertyChanged(); }
+        }
+
+        public double MoveZ
+        {
+            get => _moveZ;
+            set { _moveZ = value; OnPropertyChanged(); }
+        }
+
+        public double RotateAngle
+        {
+            get => _rotateAngle;
+            set { _rotateAngle = value; OnPropertyChanged(); }
+        }
+
+        public double RotateY
+        {
+            get => _rotateY;
+            set { _rotateY = value; OnPropertyChanged(); }
+        }
+
+        public double ScaleX
+        {
+            get => _scaleX;
+            set { _scaleX = value; OnPropertyChanged(); }
+        }
+
+        public double ScaleY
+        {
+            get => _scaleY;
+            set { _scaleY = value; OnPropertyChanged(); }
+        }
+
+        public double ScaleZ
+        {
+            get => _scaleZ;
+            set { _scaleZ = value; OnPropertyChanged(); }
+        }
+
+        public ICommand MoveXCommand { get; }
+        public ICommand MoveYCommand { get; }
+        public ICommand MoveZCommand { get; }
+        public ICommand RotateAngleCommand { get; }
+        public ICommand RotateYCommand { get; }
+        public ICommand ScaleXCommand { get; }
+        public ICommand ScaleYCommand { get; }
+        public ICommand ScaleZCommand { get; }
 
         public ObservableCollection<ShapeViewModel> Shapes => _shapes;
         public ObservableCollection<GroupViewModel> Groups => _groups;
@@ -181,6 +256,66 @@ namespace DrawERR.ViewModels
             foreach (var shape in _selectedShapes) MoveShape(shape, 0, 10);
         }
 
+        private void MoveXByAmount(object parameter)
+        {
+            foreach (var shape in _selectedShapes) MoveShape(shape, _moveX, 0);
+        }
+
+        private void MoveYByAmount(object parameter)
+        {
+            foreach (var shape in _selectedShapes) MoveShape(shape, 0, _moveY);
+        }
+
+        private void MoveZByAmount(object parameter)
+        {
+            const double FocalLength = 500;
+            foreach (var shape in _selectedShapes)
+            {
+                foreach (var pt in shape.PointViewModels)
+                {
+                    double zOld = pt.Z;
+                    pt.Z += _moveZ;
+                    if (pt.Z < -490) pt.Z = -490;
+                    double zNew = pt.Z;
+                    double scaleOld = FocalLength / (FocalLength + zOld);
+                    double scaleNew = FocalLength / (FocalLength + zNew);
+                    double ratio = scaleOld / scaleNew;
+                    pt.X = pt.X * ratio;
+                    pt.Y = pt.Y * ratio;
+                }
+            }
+        }
+
+        private void RotateByAngle(object parameter)
+        {
+            var center = GetTransformCenter();
+            foreach (var shape in _selectedShapes) RotateAroundCenter(shape, _rotateAngle, center);
+        }
+
+        private void RotateYByAngle(object parameter)
+        {
+            var center = GetTransformCenter();
+            foreach (var shape in _selectedShapes) RotateYAroundCenter(shape, _rotateY, center);
+        }
+
+        private void ScaleXByAmount(object parameter)
+        {
+            var center = GetTransformCenter();
+            foreach (var shape in _selectedShapes) ScaleAroundCenter(shape, _scaleX, 1.0, center);
+        }
+
+        private void ScaleYByAmount(object parameter)
+        {
+            var center = GetTransformCenter();
+            foreach (var shape in _selectedShapes) ScaleAroundCenter(shape, 1.0, _scaleY, center);
+        }
+
+        private void ScaleZByAmount(object parameter)
+        {
+            var center = GetTransformCenter();
+            foreach (var shape in _selectedShapes) ScaleAroundCenter(shape, _scaleZ, _scaleZ, center);
+        }
+
         private void MoveShape(ShapeViewModel shape, double dx, double dy)
         {
             if (shape.SelectedPoint != null)
@@ -225,6 +360,21 @@ namespace DrawERR.ViewModels
             }
         }
 
+        private void RotateYAroundCenter(ShapeViewModel shape, double angleDegrees, Point center)
+        {
+            var rad = angleDegrees * Math.PI / 180.0;
+            var cos = Math.Cos(rad);
+            var sin = Math.Sin(rad);
+
+            foreach (var p in shape.PointViewModels)
+            {
+                var dx = p.X - center.X;
+                var dz = p.Z;
+                p.X = center.X + dx * cos + dz * sin;
+                p.Z = -dx * sin + dz * cos;
+            }
+        }
+
         private void ScaleUp(object parameter)
         {
             var center = GetTransformCenter();
@@ -245,6 +395,17 @@ namespace DrawERR.ViewModels
                 var dy = p.Y - center.Y;
                 p.X = center.X + dx * scale;
                 p.Y = center.Y + dy * scale;
+            }
+        }
+
+        private void ScaleAroundCenter(ShapeViewModel shape, double scaleX, double scaleY, Point center)
+        {
+            foreach (var p in shape.PointViewModels)
+            {
+                var dx = p.X - center.X;
+                var dy = p.Y - center.Y;
+                p.X = center.X + dx * scaleX;
+                p.Y = center.Y + dy * scaleY;
             }
         }
 

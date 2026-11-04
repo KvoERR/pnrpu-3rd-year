@@ -18,12 +18,14 @@ namespace DrawERR.Models
         public Point Position { get; set; }
         public Brush Fill { get; set; }
         public double Radius { get; set; }
+        public double Z { get; set; }
 
         public ShapePoint()
         {
             Position = new Point(0, 0);
             Fill = new SolidColorBrush(Colors.Red);
             Radius = 8;
+            Z = 0;
         }
 
         public ShapePoint(double x, double y)
@@ -31,6 +33,7 @@ namespace DrawERR.Models
             Position = new Point(x, y);
             Fill = new SolidColorBrush(Colors.Red);
             Radius = 8;
+            Z = 0;
         }
     }
 

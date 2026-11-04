@@ -195,6 +195,16 @@ namespace DrawERR.ViewModels
             }
         }
 
+        public double Z
+        {
+            get => _model.Z;
+            set
+            {
+                _model.Z = value;
+                OnPropertyChanged();
+            }
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
