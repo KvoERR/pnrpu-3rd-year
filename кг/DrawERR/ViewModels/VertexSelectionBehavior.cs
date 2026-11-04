@@ -39,7 +39,6 @@ namespace DrawERR.ViewModels
             var pointVm = ellipse.DataContext as PointViewModel;
             if (pointVm == null) return;
 
-            // Ищем ShapeViewModel через DataContext
             var shapeVm = FindShapeViewModel(ellipse);
             if (shapeVm == null) return;
 
@@ -49,7 +48,7 @@ namespace DrawERR.ViewModels
             int index = shapeVm.PointViewModels.IndexOf(pointVm);
             if (index < 0) return;
 
-            // Отменяем выделение фигуры
+            // Отменяем выделение всех фигур
             foreach (var s in mainVm.SelectedShapes)
                 s.IsSelected = false;
             mainVm.SelectedShapes.Clear();
@@ -59,6 +58,8 @@ namespace DrawERR.ViewModels
             shapeVm.IsSelected = true;
             mainVm.SelectedShapes.Add(shapeVm);
             mainVm.SelectedShape = shapeVm;
+
+            e.Handled = true;
         }
 
         private static ShapeViewModel FindShapeViewModel(DependencyObject obj)
