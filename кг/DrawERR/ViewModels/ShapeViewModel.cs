@@ -1,5 +1,6 @@
 ﻿using DrawERR.Models;
 using System;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -12,7 +13,7 @@ namespace DrawERR.ViewModels
     {
         private ShapeItem _model;
         private bool _isSelected;
-        private MainViewModel _mainViewModel;
+        private int _selectedPointIndex = -1;
 
         public ShapeViewModel(ShapeItem model)
         {
@@ -21,147 +22,90 @@ namespace DrawERR.ViewModels
 
         public ShapeItem Shape => _model;
 
-        public MainViewModel MainViewModel
-        {
-            get => _mainViewModel;
-            set
-            {
-                _mainViewModel = value;
-                OnPropertyChanged();
-            }
-        }
-
         public string Id => _model.Id;
         public ShapeType Type => _model.Type;
 
-        // Трансформированные точки (для ItemsControl — кружки)
-        public PointCollection TransformedPoints
+        // Коллекция точек с координатами для привязки
+        public ObservableCollection<PointViewModel> PointViewModels { get; } = new ObservableCollection<PointViewModel>();
+
+        // Коллекция линий с координатами для рисования
+        public ObservableCollection<LineInfo> Lines { get; } = new ObservableCollection<LineInfo>();
+
+        // Инициализация ViewModel из модели
+        public void Initialize()
         {
-            get
+            PointViewModels.Clear();
+            Lines.Clear();
+
+            foreach (var pt in _model.Points)
             {
-                var pts = _model.GetTransformedPoints();
-                var collection = new PointCollection(pts.Length);
-                foreach (var p in pts)
-                    collection.Add(p);
-                return collection;
+                var vm = new PointViewModel(pt);
+                vm.PropertyChanged += (s, e) => NotifyChanged();
+                PointViewModels.Add(vm);
             }
+
+            NotifyChanged();
         }
 
-        // Для замкнутых фигур (3+ точек) — добавляем первую точку в конец
-        public PointCollection ClosedPoints
+        // Выбранная точка (индекс)
+        public int SelectedPointIndex
         {
-            get
-            {
-                var pts = _model.GetTransformedPoints();
-                int count = pts.Length >= 3 ? pts.Length + 1 : pts.Length;
-                var collection = new PointCollection(count);
-                foreach (var p in pts)
-                    collection.Add(p);
-                if (pts.Length >= 3 && pts.Length > 0)
-                    collection.Add(pts[0]);
-                return collection;
-            }
-        }
-
-        // Координаты (для удобства)
-        public double X
-        {
-            get => _model.TransformMatrix.OffsetX;
+            get => _selectedPointIndex;
             set
             {
-                var matrix = _model.TransformMatrix;
-                matrix.OffsetX = value;
-                _model.TransformMatrix = matrix;
-                NotifyTransformChanged();
+                _selectedPointIndex = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(SelectedPoint));
             }
         }
 
-        public double Y
+        public PointViewModel SelectedPoint
         {
-            get => _model.TransformMatrix.OffsetY;
+            get => _selectedPointIndex >= 0 && _selectedPointIndex < PointViewModels.Count
+                ? PointViewModels[_selectedPointIndex] : null;
             set
             {
-                var matrix = _model.TransformMatrix;
-                matrix.OffsetY = value;
-                _model.TransformMatrix = matrix;
-                NotifyTransformChanged();
-                OnPropertyChanged();
-            }
-        }
-
-        // Угол поворота (в градусах)
-        public double RotationAngle
-        {
-            get
-            {
-                var matrix = _model.TransformMatrix;
-                return Math.Atan2(matrix.M12, matrix.M11) * 180.0 / Math.PI;
-            }
-            set
-            {
-                var currentAngle = RotationAngle;
-                double delta = value - currentAngle;
-                if (Math.Abs(delta) > 0.001)
+                if (value == null)
+                    _selectedPointIndex = -1;
+                else
                 {
-                    _model.Rotate(delta);
-                    NotifyTransformChanged();
+                    var idx = PointViewModels.IndexOf(value);
+                    _selectedPointIndex = idx >= 0 ? idx : -1;
                 }
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(SelectedPointIndex));
             }
         }
 
-        // Масштаб
-        public double ScaleFactor
+        // Переключение выделения точки
+        public void TogglePointSelection(int index)
         {
-            get
-            {
-                var matrix = _model.TransformMatrix;
-                return Math.Sqrt(matrix.M11 * matrix.M11 + matrix.M12 * matrix.M12);
-            }
-            set
-            {
-                if (value <= 0.01) return;
-                var matrix = _model.TransformMatrix;
-                var center = _model.GetCenter();
-                matrix.Translate(-center.X, -center.Y);
-                matrix.Scale(value, value);
-                matrix.Translate(center.X, center.Y);
-                _model.TransformMatrix = matrix;
-                NotifyTransformChanged();
-                OnPropertyChanged();
-            }
+            if (_selectedPointIndex == index)
+                SelectedPointIndex = -1; // отмена выделения
+            else
+                SelectedPointIndex = index;
         }
 
-        // Свойства для отображения
-        public Brush Fill
+        private void NotifyChanged()
         {
-            get => _model.Fill;
-            set
+            Lines.Clear();
+            for (int i = 0; i < _model.Lines.Count; i++)
             {
-                _model.Fill = value;
-                OnPropertyChanged();
+                var lineDef = _model.Lines[i];
+                if (lineDef.FromIndex < PointViewModels.Count && lineDef.ToIndex < PointViewModels.Count)
+                {
+                    var p1 = PointViewModels[lineDef.FromIndex];
+                    var p2 = PointViewModels[lineDef.ToIndex];
+                    Lines.Add(new LineInfo
+                    {
+                        Points = new PointCollection(new[] { new Point(p1.X, p1.Y), new Point(p2.X, p2.Y) }),
+                        Stroke = lineDef.Stroke,
+                        StrokeThickness = lineDef.StrokeThickness
+                    });
+                }
             }
-        }
-
-        public Brush Stroke
-        {
-            get => _model.Stroke;
-            set
-            {
-                _model.Stroke = value;
-                OnPropertyChanged();
-            }
-        }
-
-        public double StrokeThickness
-        {
-            get => _model.StrokeThickness;
-            set
-            {
-                _model.StrokeThickness = value;
-                OnPropertyChanged();
-            }
+            OnPropertyChanged(nameof(Lines));
+            OnPropertyChanged(nameof(Bounds));
         }
 
         public bool IsSelected
@@ -183,27 +127,157 @@ namespace DrawERR.ViewModels
             {
                 return Type switch
                 {
-                    ShapeType.Point => $"Точка ({X:F0}, {Y:F0})",
-                    ShapeType.Line => $"Прямая ({X:F0}, {Y:F0})",
-                    ShapeType.Triangle => $"Треугольник ({X:F0}, {Y:F0})",
-                    _ => $"{Type} ({X:F0}, {Y:F0})"
+                    ShapeType.Point => $"Точка",
+                    ShapeType.Line => $"Прямая ({_model.Points.Count} точек)",
+                    ShapeType.Triangle => $"Треугольник ({_model.Points.Count} точек)",
+                    _ => $"{Type}"
                 };
             }
         }
 
-        /// <summary>
-        /// Вызывается при любых трансформациях фигуры (Move, Rotate, Scale).
-        /// Уведомляет UI об изменении всех зависимых свойств.
-        /// </summary>
-        public void NotifyTransformChanged()
+        private int PointsCount => _model.Points.Count;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
-            OnPropertyChanged(nameof(TransformedPoints));
-            OnPropertyChanged(nameof(ClosedPoints));
-            OnPropertyChanged(nameof(Bounds));
-            OnPropertyChanged(nameof(DisplayName));
-            OnPropertyChanged(nameof(RotationAngle));
-            OnPropertyChanged(nameof(ScaleFactor));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+    }
+
+    // ViewModel точки для привязки свойств
+    public class PointViewModel : INotifyPropertyChanged
+    {
+        private ShapePoint _model;
+
+        public PointViewModel(ShapePoint model)
+        {
+            _model = model;
+        }
+
+        public double X
+        {
+            get => _model.Position.X;
+            set
+            {
+                _model.Position = new Point(value, _model.Position.Y);
+                OnPropertyChanged();
+            }
+        }
+
+        public double Y
+        {
+            get => _model.Position.Y;
+            set
+            {
+                _model.Position = new Point(_model.Position.X, value);
+                OnPropertyChanged();
+            }
+        }
+
+        public Brush Fill
+        {
+            get => _model.Fill;
+            set
+            {
+                _model.Fill = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public double Radius
+        {
+            get => _model.Radius;
+            set
+            {
+                _model.Radius = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
+    // Информация о линии для рисования
+    public class LineInfo
+    {
+        public PointCollection Points { get; set; }
+        public Brush Stroke { get; set; }
+        public double StrokeThickness { get; set; }
+    }
+
+    // ViewModel группы фигур
+    public class GroupViewModel : INotifyPropertyChanged
+    {
+        private GroupModel _model;
+        private bool _isSelected;
+
+        public GroupViewModel(GroupModel model)
+        {
+            _model = model;
+        }
+
+        // Конструктор с готовыми ShapeViewModel
+        public GroupViewModel(GroupModel model, IEnumerable<ShapeViewModel> childViewModels)
+        {
+            _model = model;
+            foreach (var childVm in childViewModels)
+            {
+                ChildShapes.Add(childVm);
+                foreach (var pt in childVm.PointViewModels)
+                    PointViewModels.Add(pt);
+            }
+        }
+
+        public GroupModel Group => _model;
+        public string Id => _model.Id;
+
+        // Коллекция точек всех фигур внутри группы
+        public ObservableCollection<PointViewModel> PointViewModels { get; } = new ObservableCollection<PointViewModel>();
+
+        // Коллекция ShapeViewModel дочерних фигур
+        public ObservableCollection<ShapeViewModel> ChildShapes { get; } = new ObservableCollection<ShapeViewModel>();
+
+        // Инициализация ViewModel из модели (для загрузки из файла)
+        public void Initialize()
+        {
+            PointViewModels.Clear();
+            ChildShapes.Clear();
+
+            foreach (var child in _model.Children)
+            {
+                // Если это ShapeItem, создаём ShapeViewModel
+                if (child is not GroupModel)
+                {
+                    var shapeVm = new ShapeViewModel(child);
+                    shapeVm.Initialize();
+                    ChildShapes.Add(shapeVm);
+
+                    foreach (var pt in shapeVm.PointViewModels)
+                        PointViewModels.Add(pt);
+                }
+            }
+        }
+
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set
+            {
+                _isSelected = value;
+                _model.IsSelected = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public Rect Bounds => _model.GetBounds();
+
+        public string DisplayName => $"Группа ({ChildShapes.Count} фигур)";
 
         public event PropertyChangedEventHandler PropertyChanged;
 

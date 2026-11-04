@@ -17,18 +17,20 @@ namespace DrawERR.ViewModels
     public class MainViewModel : INotifyPropertyChanged
     {
         private readonly ObservableCollection<ShapeViewModel> _shapes;
+        private readonly ObservableCollection<GroupViewModel> _groups;
         private readonly ObservableCollection<ShapeViewModel> _selectedShapes;
         private ShapeViewModel _selectedShape;
+        private GroupViewModel _selectedGroup;
         private ShapeType _selectedShapeType;
         private static readonly Random _random = new Random();
 
         public MainViewModel()
         {
             _shapes = new ObservableCollection<ShapeViewModel>();
+            _groups = new ObservableCollection<GroupViewModel>();
             _selectedShapes = new ObservableCollection<ShapeViewModel>();
             _selectedShapeType = ShapeType.Point;
 
-            // Команды
             AddShapeCommand = new RelayCommand(AddShape);
             DeleteShapeCommand = new RelayCommand(DeleteShape, param => _selectedShapes.Count > 0);
             SaveCommand = new RelayCommand(Save);
@@ -36,7 +38,6 @@ namespace DrawERR.ViewModels
             ClearCommand = new RelayCommand(Clear);
             ToggleSelectionCommand = new RelayCommand<ShapeViewModel>(ToggleShapeSelection);
 
-            // Трансформации
             MoveLeftCommand = new RelayCommand(MoveLeft, param => _selectedShapes.Count > 0);
             MoveRightCommand = new RelayCommand(MoveRight, param => _selectedShapes.Count > 0);
             MoveUpCommand = new RelayCommand(MoveUp, param => _selectedShapes.Count > 0);
@@ -45,36 +46,68 @@ namespace DrawERR.ViewModels
             RotateRightCommand = new RelayCommand(RotateRight, param => _selectedShapes.Count > 0);
             ScaleUpCommand = new RelayCommand(ScaleUp, param => _selectedShapes.Count > 0);
             ScaleDownCommand = new RelayCommand(ScaleDown, param => _selectedShapes.Count > 0);
+            MirrorXCommand = new RelayCommand(MirrorX, param => _selectedShapes.Count > 0);
+            MirrorYCommand = new RelayCommand(MirrorY, param => _selectedShapes.Count > 0);
+            ShearXCommand = new RelayCommand(ShearX, param => _selectedShapes.Count > 0);
+            ShearYCommand = new RelayCommand(ShearY, param => _selectedShapes.Count > 0);
+            GroupCommand = new RelayCommand(Group, param => _selectedShapes.Count >= 2);
+            UngroupCommand = new RelayCommand(Ungroup, param => _selectedGroup != null);
             DeselectAllCommand = new RelayCommand(DeselectAll);
         }
 
         public ObservableCollection<ShapeViewModel> Shapes => _shapes;
+        public ObservableCollection<GroupViewModel> Groups => _groups;
         public IEnumerable<ShapeType> ShapeTypes => Enum.GetValues(typeof(ShapeType)).Cast<ShapeType>();
 
         public ShapeType SelectedShapeType
         {
             get => _selectedShapeType;
-            set
-            {
-                _selectedShapeType = value;
-                OnPropertyChanged();
-            }
+            set { _selectedShapeType = value; OnPropertyChanged(); }
         }
 
         public ShapeViewModel SelectedShape
         {
             get => _selectedShape;
-            set
+            set { _selectedShape = value; OnPropertyChanged(); }
+        }
+
+        public GroupViewModel SelectedGroup
+        {
+            get => _selectedGroup;
+            set { _selectedGroup = value; OnPropertyChanged(); OnPropertyChanged(nameof(SelectedItemDisplayName)); }
+        }
+
+        public string SelectedItemDisplayName
+        {
+            get
             {
-                if (_selectedShape != value)
-                {
-                    _selectedShape = value;
-                    OnPropertyChanged();
-                }
+                if (_selectedGroup != null) return _selectedGroup.DisplayName;
+                if (_selectedShape != null) return _selectedShape.DisplayName;
+                return "Не выбрано";
             }
         }
 
         public ObservableCollection<ShapeViewModel> SelectedShapes => _selectedShapes;
+
+        // Bounding box всех выделенных фигур
+        public Rect SelectedBounds
+        {
+            get
+            {
+                if (_selectedShapes.Count == 0) return Rect.Empty;
+                double minX = double.MaxValue, maxX = double.MinValue;
+                double minY = double.MaxValue, maxY = double.MinValue;
+                foreach (var s in _selectedShapes)
+                {
+                    var b = s.Shape.GetBounds();
+                    if (b.X < minX) minX = b.X;
+                    if (b.Right > maxX) maxX = b.Right;
+                    if (b.Y < minY) minY = b.Y;
+                    if (b.Bottom > maxY) maxY = b.Bottom;
+                }
+                return new Rect(minX, minY, maxX - minX, maxY - minY);
+            }
+        }
 
         public ICommand AddShapeCommand { get; }
         public ICommand DeleteShapeCommand { get; }
@@ -82,7 +115,6 @@ namespace DrawERR.ViewModels
         public ICommand LoadCommand { get; }
         public ICommand ClearCommand { get; }
         public ICommand ToggleSelectionCommand { get; }
-
         public ICommand MoveLeftCommand { get; }
         public ICommand MoveRightCommand { get; }
         public ICommand MoveUpCommand { get; }
@@ -91,9 +123,14 @@ namespace DrawERR.ViewModels
         public ICommand RotateRightCommand { get; }
         public ICommand ScaleUpCommand { get; }
         public ICommand ScaleDownCommand { get; }
+        public ICommand MirrorXCommand { get; }
+        public ICommand MirrorYCommand { get; }
+        public ICommand ShearXCommand { get; }
+        public ICommand ShearYCommand { get; }
+        public ICommand GroupCommand { get; }
+        public ICommand UngroupCommand { get; }
         public ICommand DeselectAllCommand { get; }
 
-        // ========== ДОБАВЛЕНИЕ ФИГУР ==========
         private void AddShape(object parameter)
         {
             ShapeItem shape = SelectedShapeType switch
@@ -104,132 +141,261 @@ namespace DrawERR.ViewModels
                 _ => new PointShape()
             };
 
-            // Случайная позиция
-            var matrix = shape.TransformMatrix;
-            matrix.OffsetX = _random.Next(50, 750);
-            matrix.OffsetY = _random.Next(50, 550);
-            shape.TransformMatrix = matrix;
+            var offsetX = _random.Next(50, 750);
+            var offsetY = _random.Next(50, 550);
+            foreach (var p in shape.Points)
+                p.Position = new Point(p.Position.X + offsetX, p.Position.Y + offsetY);
 
-            // Случайный цвет для треугольника
             if (shape is TriangleShape)
             {
-                shape.Fill = GetRandomColor();
+                var colors = new[] { Colors.Orange, Colors.Gold, Colors.Goldenrod, Colors.DarkOrange, Colors.SandyBrown };
+                foreach (var p in shape.Points)
+                    p.Fill = new SolidColorBrush(colors[_random.Next(colors.Length)]);
             }
 
-            var viewModel = new ShapeViewModel(shape);
-            viewModel.MainViewModel = this;
-            _shapes.Add(viewModel);
-            _selectedShapes.Add(viewModel);
-            viewModel.IsSelected = true;
-            SelectedShape = viewModel;
+            var vm = new ShapeViewModel(shape);
+            vm.Initialize();
+            _shapes.Add(vm);
+            _selectedShapes.Add(vm);
+            vm.IsSelected = true;
+            SelectedShape = vm;
         }
 
-        // ========== ТРАНСФОРМАЦИИ ==========
         private void MoveLeft(object parameter)
         {
-            foreach (var shape in _selectedShapes)
-                shape.X -= 10;
+            foreach (var shape in _selectedShapes) MoveShape(shape, -10, 0);
         }
 
         private void MoveRight(object parameter)
         {
-            foreach (var shape in _selectedShapes)
-                shape.X += 10;
+            foreach (var shape in _selectedShapes) MoveShape(shape, 10, 0);
         }
 
         private void MoveUp(object parameter)
         {
-            foreach (var shape in _selectedShapes)
-                shape.Y -= 10;
+            foreach (var shape in _selectedShapes) MoveShape(shape, 0, -10);
         }
 
         private void MoveDown(object parameter)
         {
-            foreach (var shape in _selectedShapes)
-                shape.Y += 10;
+            foreach (var shape in _selectedShapes) MoveShape(shape, 0, 10);
+        }
+
+        private void MoveShape(ShapeViewModel shape, double dx, double dy)
+        {
+            if (shape.SelectedPoint != null)
+            {
+                shape.SelectedPoint.X += dx;
+                shape.SelectedPoint.Y += dy;
+            }
+            else
+            {
+                foreach (var p in shape.PointViewModels)
+                {
+                    p.X += dx;
+                    p.Y += dy;
+                }
+            }
         }
 
         private void RotateLeft(object parameter)
         {
-            foreach (var shape in _selectedShapes)
-            {
-                shape.Shape.Rotate(-15);
-                shape.NotifyTransformChanged();
-            }
+            var center = GetTransformCenter();
+            foreach (var shape in _selectedShapes) RotateAroundCenter(shape, -15, center);
         }
 
         private void RotateRight(object parameter)
         {
-            foreach (var shape in _selectedShapes)
+            var center = GetTransformCenter();
+            foreach (var shape in _selectedShapes) RotateAroundCenter(shape, 15, center);
+        }
+
+        private void RotateAroundCenter(ShapeViewModel shape, double angleDegrees, Point center)
+        {
+            var rad = angleDegrees * Math.PI / 180.0;
+            var cos = Math.Cos(rad);
+            var sin = Math.Sin(rad);
+
+            foreach (var p in shape.PointViewModels)
             {
-                shape.Shape.Rotate(15);
-                shape.NotifyTransformChanged();
+                var dx = p.X - center.X;
+                var dy = p.Y - center.Y;
+                p.X = center.X + dx * cos - dy * sin;
+                p.Y = center.Y + dx * sin + dy * cos;
             }
         }
 
         private void ScaleUp(object parameter)
         {
-            foreach (var shape in _selectedShapes)
-            {
-                shape.Shape.Scale(1.2);
-                shape.NotifyTransformChanged();
-            }
+            var center = GetTransformCenter();
+            foreach (var shape in _selectedShapes) ScaleAroundCenter(shape, 1.2, center);
         }
 
         private void ScaleDown(object parameter)
         {
-            foreach (var shape in _selectedShapes)
+            var center = GetTransformCenter();
+            foreach (var shape in _selectedShapes) ScaleAroundCenter(shape, 0.8, center);
+        }
+
+        private void ScaleAroundCenter(ShapeViewModel shape, double scale, Point center)
+        {
+            foreach (var p in shape.PointViewModels)
             {
-                shape.Shape.Scale(0.8);
-                shape.NotifyTransformChanged();
+                var dx = p.X - center.X;
+                var dy = p.Y - center.Y;
+                p.X = center.X + dx * scale;
+                p.Y = center.Y + dy * scale;
             }
+        }
+
+        private void MirrorX(object parameter)
+        {
+            var center = GetTransformCenter();
+            foreach (var shape in _selectedShapes) MirrorShape(shape, true, false, center);
+        }
+
+        private void MirrorY(object parameter)
+        {
+            var center = GetTransformCenter();
+            foreach (var shape in _selectedShapes) MirrorShape(shape, false, true, center);
+        }
+
+        private void MirrorShape(ShapeViewModel shape, bool mirrorX, bool mirrorY, Point center)
+        {
+            foreach (var p in shape.PointViewModels)
+            {
+                if (mirrorX) p.X = center.X - (p.X - center.X);
+                if (mirrorY) p.Y = center.Y - (p.Y - center.Y);
+            }
+        }
+
+        private void ShearX(object parameter)
+        {
+            var center = GetTransformCenter();
+            foreach (var shape in _selectedShapes) ShearShape(shape, 0.3, 0, center);
+        }
+
+        private void ShearY(object parameter)
+        {
+            var center = GetTransformCenter();
+            foreach (var shape in _selectedShapes) ShearShape(shape, 0, 0.3, center);
+        }
+
+        private void ShearShape(ShapeViewModel shape, double shearX, double shearY, Point center)
+        {
+            foreach (var p in shape.PointViewModels)
+            {
+                var dy = p.Y - center.Y;
+                var dx = p.X - center.X;
+                p.X = p.X + dy * shearX;
+                p.Y = p.Y + dx * shearY;
+            }
+        }
+
+        private Point GetTransformCenter()
+        {
+            if (_selectedShapes.Count == 0) return new Point(0, 0);
+            var bounds = SelectedBounds;
+            return new Point(bounds.X + bounds.Width / 2, bounds.Y + bounds.Height / 2);
         }
 
         private void DeselectAll(object parameter)
         {
-            foreach (var shape in _selectedShapes)
-                shape.IsSelected = false;
+            foreach (var shape in _selectedShapes) shape.IsSelected = false;
             _selectedShapes.Clear();
             SelectedShape = null;
+            OnPropertyChanged(nameof(SelectedBounds));
         }
 
         public void ToggleShapeSelection(ShapeViewModel shape)
         {
             if (shape == null) return;
-
-            if (_selectedShapes.Contains(shape))
-                _selectedShapes.Remove(shape);
-            else
-                _selectedShapes.Add(shape);
-
+            if (_selectedShapes.Contains(shape)) _selectedShapes.Remove(shape);
+            else _selectedShapes.Add(shape);
             shape.IsSelected = _selectedShapes.Contains(shape);
             SelectedShape = _selectedShapes.Count > 0 ? _selectedShapes.Last() : null;
+            OnPropertyChanged(nameof(SelectedBounds));
         }
 
-        // ========== ОСТАЛЬНЫЕ МЕТОДЫ ==========
         private void DeleteShape(object parameter)
         {
-            var toRemove = _selectedShapes.ToList();
-            foreach (var shape in toRemove)
-                _shapes.Remove(shape);
+            foreach (var shape in _selectedShapes.ToList()) _shapes.Remove(shape);
             _selectedShapes.Clear();
             SelectedShape = null;
+            OnPropertyChanged(nameof(SelectedBounds));
+        }
+
+        private void Group(object parameter)
+        {
+            if (_selectedShapes.Count < 2) return;
+
+            var shapesToGroup = _selectedShapes.ToList();
+            
+            // Создаём GroupModel из моделей фигур
+            var groupModel = new GroupModel(shapesToGroup.Select(s => s.Shape));
+            
+            // Создаём GroupViewModel с существующими ShapeViewModel
+            var groupVm = new GroupViewModel(groupModel, shapesToGroup);
+
+            // Удаляем фигуры из списка
+            foreach (var shape in shapesToGroup)
+            {
+                _shapes.Remove(shape);
+            }
+
+            _selectedShapes.Clear();
+
+            // Добавляем группу
+            _groups.Add(groupVm);
+            groupVm.IsSelected = true;
+            SelectedGroup = groupVm;
+            OnPropertyChanged(nameof(SelectedBounds));
+        }
+
+        private void Ungroup(object parameter)
+        {
+            if (_selectedGroup == null) return;
+
+            var group = _selectedGroup;
+            var childShapes = group.ChildShapes.ToList();
+
+            // Перемещаем дочерние фигуры обратно в _shapes
+            foreach (var child in childShapes)
+            {
+                _shapes.Add(child);
+                child.IsSelected = true;
+                _selectedShapes.Add(child);
+            }
+
+            // Удаляем группу
+            _groups.Remove(group);
+            _selectedGroup = null;
+            _selectedShape = _selectedShapes.Count > 0 ? _selectedShapes.Last() : null;
+            OnPropertyChanged(nameof(SelectedBounds));
         }
 
         private void Save(object parameter)
         {
             var dlg = new SaveFileDialog
             {
-                Filter = "XML-файл фигур|*.drawerr",
-                DefaultExt = ".drawerr",
-                FileName = "figures"
+                Filter = "XML-файл фигур|*.drawerr", DefaultExt = ".drawerr", FileName = "figures"
             };
-
             if (dlg.ShowDialog() == true)
             {
                 try
                 {
-                    var dtos = _shapes.Select(sv => ShapeDto.FromViewModel(sv)).ToList();
+                    var dtos = new List<ShapeDto>();
+                    
+                    // Сохраняем обычные фигуры
+                    dtos.AddRange(_shapes.Select(ShapeDto.FromViewModel));
+                    
+                    // Сохраняем группы
+                    foreach (var group in _groups)
+                    {
+                        var groupDto = ShapeDto.FromGroupViewModel(group);
+                        dtos.Add(groupDto);
+                    }
+                    
                     var serializer = new XmlSerializer(typeof(List<ShapeDto>));
                     using var writer = new StreamWriter(dlg.FileName);
                     serializer.Serialize(writer, dtos);
@@ -246,10 +412,8 @@ namespace DrawERR.ViewModels
         {
             var dlg = new OpenFileDialog
             {
-                Filter = "XML-файл фигур|*.drawerr",
-                DefaultExt = ".drawerr"
+                Filter = "XML-файл фигур|*.drawerr", DefaultExt = ".drawerr"
             };
-
             if (dlg.ShowDialog() == true)
             {
                 try
@@ -257,14 +421,25 @@ namespace DrawERR.ViewModels
                     var serializer = new XmlSerializer(typeof(List<ShapeDto>));
                     using var reader = new StreamReader(dlg.FileName);
                     var dtos = (List<ShapeDto>)serializer.Deserialize(reader);
-
                     _shapes.Clear();
+                    _groups.Clear();
+                    
                     foreach (var dto in dtos)
                     {
-                        var shape = dto.ToShapeItem();
-                        var vm = new ShapeViewModel(shape);
-                        vm.MainViewModel = this;
-                        _shapes.Add(vm);
+                        if (dto.IsGroup)
+                        {
+                            var group = dto.ToGroup();
+                            var groupVm = new GroupViewModel(group);
+                            groupVm.Initialize(); // Загружаем дочерние фигуры из DTO
+                            _groups.Add(groupVm);
+                        }
+                        else
+                        {
+                            var shape = dto.ToShapeItem();
+                            var vm = new ShapeViewModel(shape);
+                            vm.Initialize();
+                            _shapes.Add(vm);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -278,21 +453,10 @@ namespace DrawERR.ViewModels
         private void Clear(object parameter)
         {
             _shapes.Clear();
-            foreach (var shape in _selectedShapes.ToList())
-                shape.IsSelected = false;
+            foreach (var shape in _selectedShapes.ToList()) shape.IsSelected = false;
             _selectedShapes.Clear();
             SelectedShape = null;
-        }
-
-        private Brush GetRandomColor()
-        {
-            var colors = new[]
-            {
-                Colors.LightBlue, Colors.LightGreen, Colors.LightPink,
-                Colors.LightYellow, Colors.LightCoral, Colors.LightSalmon,
-                Colors.LightSkyBlue, Colors.LightGoldenrodYellow
-            };
-            return new SolidColorBrush(colors[_random.Next(colors.Length)]);
+            OnPropertyChanged(nameof(SelectedBounds));
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -302,42 +466,50 @@ namespace DrawERR.ViewModels
         }
     }
 
-    // ========== DTO для сериализации ==========
+    // ========== DTO ==========
     [XmlRoot("Shape")]
     public class ShapeDto
     {
         public string Id { get; set; }
         public ShapeType Type { get; set; }
-        public double OffsetX { get; set; }
-        public double OffsetY { get; set; }
-        public double RotationAngle { get; set; }
-        public double ScaleFactor { get; set; }
-        public string FillColor { get; set; }
-        public string StrokeColor { get; set; }
-        public double StrokeThickness { get; set; }
         public PointDto[] Points { get; set; }
+        public LineDto[] Lines { get; set; }
+        public ShapeDto[] Children { get; set; }
+        public bool IsGroup { get; set; }
 
         public static ShapeDto FromViewModel(ShapeViewModel vm)
         {
             var shape = vm.Shape;
-            var matrix = shape.TransformMatrix;
+            var pointDtos = shape.Points.Select(p => new PointDto
+            {
+                X = p.Position.X, Y = p.Position.Y,
+                FillColor = ColorToHex(((SolidColorBrush)p.Fill)?.Color ?? Colors.Red)
+            }).ToArray();
 
-            // Вычисляем итоговый угол поворота и масштаб из матрицы
-            double angle = Math.Atan2(matrix.M12, matrix.M11) * 180.0 / Math.PI;
-            double scale = Math.Sqrt(matrix.M11 * matrix.M11 + matrix.M12 * matrix.M12);
+            var lineDtos = shape.Lines.Select(l => new LineDto
+            {
+                FromIndex = l.FromIndex, ToIndex = l.ToIndex,
+                StrokeColor = ColorToHex(((SolidColorBrush)l.Stroke)?.Color ?? Colors.Black),
+                StrokeThickness = l.StrokeThickness
+            }).ToArray();
 
             return new ShapeDto
             {
-                Id = shape.Id,
-                Type = shape.Type,
-                OffsetX = matrix.OffsetX,
-                OffsetY = matrix.OffsetY,
-                RotationAngle = angle,
-                ScaleFactor = scale,
-                FillColor = ColorToHex(((SolidColorBrush)shape.Fill)?.Color ?? Colors.Transparent),
-                StrokeColor = ColorToHex(((SolidColorBrush)shape.Stroke)?.Color ?? Colors.Black),
-                StrokeThickness = shape.StrokeThickness,
-                Points = shape.Points.Select(p => new PointDto { X = p.X, Y = p.Y }).ToArray()
+                Id = shape.Id, Type = shape.Type, IsGroup = false,
+                Points = pointDtos, Lines = lineDtos
+            };
+        }
+
+        public static ShapeDto FromGroupViewModel(GroupViewModel groupVm)
+        {
+            var childDtos = groupVm.ChildShapes.Select(s => FromViewModel(s)).ToArray();
+            
+            return new ShapeDto
+            {
+                Id = groupVm.Group.Id,
+                Type = ShapeType.Point, // Placeholder
+                IsGroup = true,
+                Children = childDtos
             };
         }
 
@@ -351,90 +523,61 @@ namespace DrawERR.ViewModels
                 _ => new PointShape()
             };
 
-            // Восстанавливаем точки
-            if (Points != null && Points.Length > 0)
+            if (Points != null)
             {
-                shape.Points = Points.Select(p => new Point(p.X, p.Y)).ToArray();
+                for (int i = 0; i < Points.Length && i < shape.Points.Count; i++)
+                {
+                    shape.Points[i].Position = new Point(Points[i].X, Points[i].Y);
+                    shape.Points[i].Fill = new SolidColorBrush(HexToColor(Points[i].FillColor));
+                }
             }
 
-            // Восстанавливаем цвета
-            shape.Fill = new SolidColorBrush(HexToColor(FillColor));
-            shape.Stroke = new SolidColorBrush(HexToColor(StrokeColor));
-            shape.StrokeThickness = StrokeThickness;
-
-            // Восстанавливаем трансформацию
-            // Сначала устанавливаем локальные точки
-            if (Points != null && Points.Length > 0)
+            if (Lines != null)
             {
-                shape.Points = Points.Select(p => new Point(p.X, p.Y)).ToArray();
+                for (int i = 0; i < Lines.Length && i < shape.Lines.Count; i++)
+                {
+                    shape.Lines[i].FromIndex = Lines[i].FromIndex;
+                    shape.Lines[i].ToIndex = Lines[i].ToIndex;
+                    shape.Lines[i].Stroke = new SolidColorBrush(HexToColor(Lines[i].StrokeColor));
+                    shape.Lines[i].StrokeThickness = Lines[i].StrokeThickness;
+                }
             }
-
-            // Вычисляем центр фигуры в локальных координатах
-            var localCenter = shape.GetCenter();
-
-            // Строим матрицу: сдвиг к позиции на холсте, поворот, масштаб
-            var matrix = new Matrix();
-            matrix.OffsetX = OffsetX;
-            matrix.OffsetY = OffsetY;
-
-            // Поворот вокруг центра фигуры
-            if (RotationAngle != 0)
-            {
-                var rotMatrix = new Matrix();
-                rotMatrix.Translate(-localCenter.X, -localCenter.Y);
-                rotMatrix.Rotate(RotationAngle);
-                rotMatrix.Translate(localCenter.X, localCenter.Y);
-                matrix = Matrix.Multiply(matrix, rotMatrix);
-            }
-
-            // Масштабирование от центра
-            if (ScaleFactor != 1.0)
-            {
-                var scaleMatrix = new Matrix();
-                scaleMatrix.Translate(-localCenter.X, -localCenter.Y);
-                scaleMatrix.Scale(ScaleFactor, ScaleFactor);
-                scaleMatrix.Translate(localCenter.X, localCenter.Y);
-                matrix = Matrix.Multiply(matrix, scaleMatrix);
-            }
-
-            shape.TransformMatrix = matrix;
 
             return shape;
         }
 
-        private static string ColorToHex(Color color)
+        public GroupModel ToGroup()
         {
-            return $"#{color.A:X2}{color.R:X2}{color.G:X2}{color.B:X2}";
+            var group = new GroupModel();
+            if (Children != null)
+            {
+                foreach (var childDto in Children)
+                {
+                    var childShape = childDto.ToShapeItem();
+                    group.Children.Add(childShape);
+                }
+            }
+            return group;
         }
 
+        private static string ColorToHex(Color c) => $"#{c.A:X2}{c.R:X2}{c.G:X2}{c.B:X2}";
         private static Color HexToColor(string hex)
         {
-            if (string.IsNullOrEmpty(hex) || hex.Length < 7)
-                return Colors.Black;
-
+            if (string.IsNullOrEmpty(hex) || hex.Length < 7) return Colors.Black;
             hex = hex.TrimStart('#');
             if (hex.Length == 6) hex = "FF" + hex;
-
             try
             {
                 return Color.FromArgb(
                     byte.Parse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber),
                     byte.Parse(hex.Substring(2, 2), System.Globalization.NumberStyles.HexNumber),
                     byte.Parse(hex.Substring(4, 2), System.Globalization.NumberStyles.HexNumber),
-                    byte.Parse(hex.Substring(6, 2), System.Globalization.NumberStyles.HexNumber)
-                );
+                    byte.Parse(hex.Substring(6, 2), System.Globalization.NumberStyles.HexNumber));
             }
-            catch
-            {
-                return Colors.Black;
-            }
+            catch { return Colors.Black; }
         }
     }
 
-    [XmlRoot("Point")]
-    public class PointDto
-    {
-        public double X { get; set; }
-        public double Y { get; set; }
-    }
+    public class PointDto { public double X { get; set; } public double Y { get; set; } public string FillColor { get; set; } }
+    public class LineDto { public int FromIndex { get; set; } public int ToIndex { get; set; } public string StrokeColor { get; set; } public double StrokeThickness { get; set; } }
 }

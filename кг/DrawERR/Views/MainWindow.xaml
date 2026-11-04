@@ -4,11 +4,8 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:DrawERR.ViewModels"
-        xmlns:sys="clr-namespace:System;assembly=mscorlib"
         mc:Ignorable="d"
-        Title="Графический редактор" 
-        Height="700" 
-        Width="1000"
+        Title="Графический редактор" Height="700" Width="1000"
         WindowStartupLocation="CenterScreen">
 
     <Window.DataContext>
@@ -16,32 +13,25 @@
     </Window.DataContext>
 
     <Window.Resources>
-        <!-- Встроенный конвертер -->
-        <BooleanToVisibilityConverter x:Key="BoolToVisibility"/>
+        <local:BoolToVisibilityConverter x:Key="BoolToVisibility"/>
+        <local:IndexToVisibilityConverter x:Key="IndexToVisibility"/>
+        <local:OffsetConverter x:Key="OffsetConverter"/>
 
-        <!-- Универсальный шаблон: линии между точками + кружки в точках -->
         <DataTemplate x:Key="ShapeTemplate">
             <Canvas>
-                <!-- Прозрачная подложка для захвата кликов -->
+                <!-- Прозрачная подложка для клика по фигуре -->
                 <Rectangle Fill="Transparent"
                            Width="{Binding Bounds.Width}"
                            Height="{Binding Bounds.Height}"
                            Canvas.Left="{Binding Bounds.X}"
-                           Canvas.Top="{Binding Bounds.Y}"/>
+                           Canvas.Top="{Binding Bounds.Y}"
+                           IsHitTestVisible="True"
+                           local:FigureSelectionBehavior.IsSelectable="True"/>
 
-                <!-- Линии между точками -->
-                <Polyline Stroke="Black"
-                          StrokeThickness="{Binding StrokeThickness}"
-                          StrokeLineJoin="Round"
-                          Points="{Binding ClosedPoints}"
-                          Fill="Transparent"/>
-
-                <!-- Кружки в каждой точке -->
-                <ItemsControl ItemsSource="{Binding TransformedPoints}">
+                <!-- Линии -->
+                <ItemsControl ItemsSource="{Binding Lines}" IsHitTestVisible="False">
                     <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <Canvas/>
-                        </ItemsPanelTemplate>
+                        <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemContainerStyle>
                         <Style TargetType="ContentPresenter">
@@ -51,28 +41,204 @@
                     </ItemsControl.ItemContainerStyle>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Ellipse Width="10" Height="10"
-                                    Margin="-5,-5,0,0"
-                                    Fill="Black"
-                                    Stroke="White"
-                                    StrokeThickness="1"/>
+                            <Polyline Stroke="{Binding Stroke}"
+                                      StrokeThickness="{Binding StrokeThickness}"
+                                      StrokeLineJoin="Round"
+                                      Points="{Binding Points}"
+                                      Fill="Transparent"/>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <!-- Рамка выделения -->
+                <!-- Точки — каждая точка: невидимый хит-зона + видимый кружок -->
+                <ItemsControl ItemsSource="{Binding PointViewModels}" IsHitTestVisible="False">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                            <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Canvas>
+                                <!-- Невидимая большая зона для клика (радиус 12px) -->
+                                <Ellipse Fill="Transparent"
+                                         Width="24" Height="24"
+                                         Margin="-12,-12,0,0"
+                                         IsHitTestVisible="True"
+                                         local:PointDragBehavior.IsDraggable="True"/>
+                                <!-- Видимый кружок (радиус 8px) -->
+                                <Ellipse Fill="{Binding Fill}"
+                                         Width="16" Height="16"
+                                         Margin="-8,-8,0,0"
+                                         Stroke="White" StrokeThickness="1.5"
+                                         local:PointDragBehavior.IsDraggable="True"/>
+                            </Canvas>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Точки -->
+                <ItemsControl ItemsSource="{Binding PointViewModels}" IsHitTestVisible="False">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                            <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Ellipse Fill="{Binding Fill}"
+                                     Width="{Binding Radius}"
+                                     Height="{Binding Radius}"
+                                     Margin="-5,-5,0,0"
+                                     Stroke="White" StrokeThickness="1"
+                                     Cursor="SizeAll"
+                                     local:PointDragBehavior.IsDraggable="True"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Рамка выделения фигуры / группы -->
                 <Rectangle Stroke="Blue" StrokeThickness="2"
                            StrokeDashArray="4,2" Fill="Transparent"
-                           Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}">
+                           Visibility="{Binding DataContext.SelectedShapes.Count, Converter={StaticResource BoolToVisibility}, RelativeSource={RelativeSource AncestorType=ItemsControl}}">
                     <Rectangle.Style>
                         <Style TargetType="Rectangle">
-                            <Setter Property="Width" Value="{Binding Bounds.Width}"/>
-                            <Setter Property="Height" Value="{Binding Bounds.Height}"/>
-                            <Setter Property="Canvas.Left" Value="{Binding Bounds.X}"/>
-                            <Setter Property="Canvas.Top" Value="{Binding Bounds.Y}"/>
+                            <Setter Property="Width" Value="{Binding DataContext.SelectedBounds.Width, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
+                            <Setter Property="Height" Value="{Binding DataContext.SelectedBounds.Height, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
+                            <Setter Property="Canvas.Left" Value="{Binding DataContext.SelectedBounds.X, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
+                            <Setter Property="Canvas.Top" Value="{Binding DataContext.SelectedBounds.Y, RelativeSource={RelativeSource AncestorType=ItemsControl}}"/>
                         </Style>
                     </Rectangle.Style>
                 </Rectangle>
+
+                <!-- Рамка выделенной точки -->
+                <Rectangle Stroke="Red" StrokeThickness="2"
+                           Visibility="{Binding SelectedPointIndex, Converter={StaticResource IndexToVisibility}}">
+                    <Rectangle.Style>
+                        <Style TargetType="Rectangle">
+                            <Setter Property="Width" Value="14"/>
+                            <Setter Property="Height" Value="14"/>
+                            <Setter Property="Canvas.Left" Value="{Binding Bounds.X, Converter={StaticResource OffsetConverter}}"/>
+                            <Setter Property="Canvas.Top" Value="{Binding Bounds.Y, Converter={StaticResource OffsetConverter}}"/>
+                        </Style>
+                    </Rectangle.Style>
+                </Rectangle>
+            </Canvas>
+        </DataTemplate>
+
+        <DataTemplate x:Key="GroupTemplate">
+            <Canvas Width="{Binding Bounds.Width}" Height="{Binding Bounds.Height}">
+                <!-- Отображаем дочерние фигуры -->
+                <ItemsControl ItemsSource="{Binding ChildShapes}" IsHitTestVisible="False">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Canvas Width="{Binding Bounds.Width}" Height="{Binding Bounds.Height}">
+                                <!-- Линии -->
+                                <ItemsControl ItemsSource="{Binding Lines}" IsHitTestVisible="False">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemContainerStyle>
+                                        <Style TargetType="ContentPresenter">
+                                            <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                            <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                        </Style>
+                                    </ItemsControl.ItemContainerStyle>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Polyline Stroke="{Binding Stroke}"
+                                                      StrokeThickness="{Binding StrokeThickness}"
+                                                      StrokeLineJoin="Round"
+                                                      Points="{Binding Points}"
+                                                      Fill="Transparent"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <!-- Точки -->
+                                <ItemsControl ItemsSource="{Binding PointViewModels}" IsHitTestVisible="False">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemContainerStyle>
+                                        <Style TargetType="ContentPresenter">
+                                            <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                            <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                        </Style>
+                                    </ItemsControl.ItemContainerStyle>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Canvas>
+                                                <Ellipse Fill="Transparent"
+                                                          Width="24" Height="24"
+                                                          Margin="-12,-12,0,0"
+                                                          IsHitTestVisible="True"
+                                                          local:PointDragBehavior.IsDraggable="True"/>
+                                                <Ellipse Fill="{Binding Fill}"
+                                                          Width="16" Height="16"
+                                                          Margin="-8,-8,0,0"
+                                                          Stroke="White" StrokeThickness="1.5"
+                                                          local:PointDragBehavior.IsDraggable="True"/>
+                                            </Canvas>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <ItemsControl ItemsSource="{Binding PointViewModels}" IsHitTestVisible="False">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemContainerStyle>
+                                        <Style TargetType="ContentPresenter">
+                                            <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                            <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                        </Style>
+                                    </ItemsControl.ItemContainerStyle>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Ellipse Fill="{Binding Fill}"
+                                                      Width="{Binding Radius}"
+                                                      Height="{Binding Radius}"
+                                                      Margin="-5,-5,0,0"
+                                                      Stroke="White" StrokeThickness="1"
+                                                      Cursor="SizeAll"
+                                                      local:PointDragBehavior.IsDraggable="True"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Canvas>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Рамка выделения группы -->
+                <Rectangle Stroke="Green" StrokeThickness="2"
+                           StrokeDashArray="6,3" Fill="Transparent"
+                           Visibility="{Binding IsSelected, Converter={StaticResource BoolToVisibility}}"
+                           Width="{Binding Bounds.Width}"
+                           Height="{Binding Bounds.Height}"
+                           Canvas.Left="{Binding Bounds.X}"
+                           Canvas.Top="{Binding Bounds.Y}"/>
+
+                <!-- Прозрачная подложка для клика по группе (всегда сверху) -->
+                <Rectangle Fill="Transparent"
+                           Width="{Binding Bounds.Width}"
+                           Height="{Binding Bounds.Height}"
+                           Canvas.Left="{Binding Bounds.X}"
+                           Canvas.Top="{Binding Bounds.Y}"
+                           IsHitTestVisible="True"
+                           local:FigureSelectionBehavior.IsSelectable="True"/>
             </Canvas>
         </DataTemplate>
     </Window.Resources>
@@ -83,7 +249,6 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="200"/>
             <ColumnDefinition Width="*"/>
@@ -108,210 +273,160 @@
             <Separator/>
             <Button Content="🔍+" Command="{Binding ScaleUpCommand}" Padding="10,5"/>
             <Button Content="🔍-" Command="{Binding ScaleDownCommand}" Padding="10,5"/>
+            <Separator/>
+            <Button Content="↔" Command="{Binding MirrorXCommand}" Padding="10,5" ToolTip="Отразить по X"/>
+            <Button Content="↕" Command="{Binding MirrorYCommand}" Padding="10,5" ToolTip="Отразить по Y"/>
+            <Separator/>
+            <Button Content="⤯" Command="{Binding ShearXCommand}" Padding="10,5" ToolTip="Зсув по X"/>
+            <Button Content="⤮" Command="{Binding ShearYCommand}" Padding="10,5" ToolTip="Зсув по Y"/>
+            <Separator/>
+            <Button Content="Группа" Command="{Binding GroupCommand}" Padding="10,5" ToolTip="Объединить выделенные фигуры"/>
+            <Separator/>
+            <Button Content="Разгруппировать" Command="{Binding UngroupCommand}" Padding="10,5" ToolTip="Разделить группу на отдельные фигуры"/>
         </ToolBar>
 
-        <!-- Левая панель -->
-        <Border Grid.Row="1" Grid.Column="0" 
-                BorderBrush="Gray" 
-                BorderThickness="1" 
-                Margin="5">
+        <!-- Левая панель — фигуры и группы -->
+        <Border Grid.Row="1" Grid.Column="0" BorderBrush="Gray" BorderThickness="1" Margin="5">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-
-                <TextBlock Grid.Row="0" 
-                           Text="Элементы" 
-                           FontWeight="Bold" 
-                           Margin="10"/>
-
-                <ListBox Grid.Row="1" 
-                         ItemsSource="{Binding Shapes}"
-                         SelectedItem="{Binding SelectedShape}"
-                         Margin="5">
+                <TextBlock Grid.Row="0" Text="Фигуры" FontWeight="Bold" Margin="10"/>
+                <ListBox Grid.Row="1" ItemsSource="{Binding Shapes}"
+                         SelectedItem="{Binding SelectedShape}" Margin="5">
                     <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding DisplayName}"/>
-                        </DataTemplate>
+                        <DataTemplate><TextBlock Text="{Binding DisplayName}"/></DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <TextBlock Grid.Row="2" Text="Группы" FontWeight="Bold" Margin="10"/>
+                <ListBox Grid.Row="3" ItemsSource="{Binding Groups}"
+                         SelectedItem="{Binding SelectedGroup}" Margin="5">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate><TextBlock Text="{Binding DisplayName}"/></DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
             </Grid>
         </Border>
 
         <!-- Рабочая область -->
-        <Border Grid.Row="1" Grid.Column="1" 
-                BorderBrush="Gray" 
-                BorderThickness="1" 
-                Margin="5"
-                Background="White">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" 
-                          HorizontalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding Shapes}"
-                              ItemTemplate="{StaticResource ShapeTemplate}"
-                              PreviewMouseLeftButtonDown="ItemsControl_PreviewMouseLeftButtonDown">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                        <Canvas Width="800" 
-                                Height="600"
-                                Background="White">
-                            <Canvas.InputBindings>
-                                <MouseBinding MouseAction="LeftClick"
-                                              Command="{Binding DeselectAllCommand}"/>
-                            </Canvas.InputBindings>
-                        </Canvas>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                </ItemsControl>
+        <Border Grid.Row="1" Grid.Column="1" BorderBrush="Gray" BorderThickness="1" Margin="5" Background="White">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                <Canvas Width="800" Height="600" Background="White">
+                    <Canvas.InputBindings>
+                        <MouseBinding MouseAction="LeftClick"
+                                      Command="{Binding DeselectAllCommand}"/>
+                    </Canvas.InputBindings>
+                    
+                    <!-- Отображаем фигуры -->
+                    <ItemsControl ItemsSource="{Binding Shapes}"
+                                  ItemTemplate="{StaticResource ShapeTemplate}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                    
+                    <!-- Отображаем группы -->
+                    <ItemsControl ItemsSource="{Binding Groups}"
+                                  ItemTemplate="{StaticResource GroupTemplate}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><Canvas/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </Canvas>
             </ScrollViewer>
         </Border>
 
-        <!-- Правая панель свойств -->
-        <Border Grid.Row="1" Grid.Column="2"
-                BorderBrush="Gray"
-                BorderThickness="1"
-                Margin="5">
+        <!-- Правая панель — свойства -->
+        <Border Grid.Row="1" Grid.Column="2" BorderBrush="Gray" BorderThickness="1" Margin="5">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
-
-                <TextBlock Grid.Row="0"
-                           Text="Свойства"
-                           FontWeight="Bold"
-                           Margin="10"/>
-
+                <TextBlock Grid.Row="0" Text="Свойства" FontWeight="Bold" Margin="10"/>
                 <ScrollViewer Grid.Row="1" Margin="5" VerticalScrollBarVisibility="Auto">
                     <StackPanel>
-                        <!-- Информация о фигуре -->
-                        <TextBlock Text="Фигура:" FontWeight="Bold" Margin="0,5,0,0"/>
-                        <TextBlock Text="{Binding SelectedShape.DisplayName, FallbackValue='Не выбрано'}"
+                        <TextBlock Text="{Binding SelectedItemDisplayName, FallbackValue='Не выбрано'}"
                                    Margin="5,0"/>
 
-                        <!-- Позиция -->
-                        <TextBlock Text="Позиция:" FontWeight="Bold" Margin="0,10,0,5"/>
-                        <Grid Margin="5,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="X:" VerticalAlignment="Center"/>
-                            <TextBox Grid.Column="1"
-                                     Text="{Binding SelectedShape.X, StringFormat={}{0:F2}, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="5,0"/>
-                        </Grid>
-                        <Grid Margin="5,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Y:" VerticalAlignment="Center"/>
-                            <TextBox Grid.Column="1"
-                                     Text="{Binding SelectedShape.Y, StringFormat={}{0:F2}, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="5,0"/>
-                        </Grid>
+                        <!-- Точки фигуры -->
+                        <TextBlock Text="Точки фигуры:" FontWeight="Bold" Margin="0,10,0,5"/>
+                        <ListBox ItemsSource="{Binding SelectedShape.PointViewModels}"
+                                 SelectedItem="{Binding SelectedShape.SelectedPoint}"
+                                 Margin="5">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding X, StringFormat={}{0:F0}}"/>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
 
-                        <!-- Поворот -->
-                        <TextBlock Text="Поворот:" FontWeight="Bold" Margin="0,10,0,5"/>
-                        <Grid Margin="5,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Угол:" VerticalAlignment="Center"/>
-                            <TextBox Grid.Column="1"
-                                     Text="{Binding SelectedShape.RotationAngle, StringFormat={}{0:F2}, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="5,0"/>
-                        </Grid>
+                        <!-- Свойства выбранной точки -->
+                        <Border Background="#F0F0F0" BorderBrush="Gray" BorderThickness="1" CornerRadius="3" Margin="0,5,0,0">
+                            <StackPanel Margin="10">
+                                <TextBlock Text="Выбранная точка:" FontWeight="Bold" Margin="0,0,0,5"/>
 
-                        <!-- Масштаб -->
-                        <TextBlock Text="Масштаб:" FontWeight="Bold" Margin="0,10,0,5"/>
-                        <Grid Margin="5,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock Text="Размер:" VerticalAlignment="Center"/>
-                            <TextBox Grid.Column="1"
-                                     Text="{Binding SelectedShape.ScaleFactor, StringFormat={}{0:F2}, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="5,0"/>
-                        </Grid>
+                                <Grid Margin="5,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="30"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="X:" VerticalAlignment="Center"/>
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding SelectedShape.SelectedPoint.X, StringFormat={}{0:F2}, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="5,0"/>
+                                </Grid>
+                                <Grid Margin="5,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="30"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Y:" VerticalAlignment="Center"/>
+                                    <TextBox Grid.Column="1"
+                                             Text="{Binding SelectedShape.SelectedPoint.Y, StringFormat={}{0:F2}, UpdateSourceTrigger=PropertyChanged}"
+                                             Margin="5,0"/>
+                                </Grid>
 
-                        <!-- Граница (Bounding Box) -->
-                        <TextBlock Text="Bounding Box:" FontWeight="Bold" Margin="0,10,0,5"/>
-                        <TextBlock Margin="5,0"
-                                   Text="{Binding SelectedShape.Bounds, FallbackValue='Не выбрано'}"/>
+                                <TextBlock Text="Цвет:" Margin="0,10,0,5"/>
+                                <Grid Margin="5,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="40"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Rectangle Width="30" Height="20" Margin="5,0"
+                                               Fill="{Binding SelectedShape.SelectedPoint.Fill, Mode=OneWay}"
+                                               Stroke="Gray" StrokeThickness="1"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding SelectedShape.SelectedPoint.Fill, StringFormat={}{0}, Mode=OneWay}"
+                                               VerticalAlignment="Center" Margin="5,0"/>
+                                </Grid>
 
-                        <!-- Цвет заливки -->
-                        <TextBlock Text="Заливка:" FontWeight="Bold" Margin="0,10,0,5"/>
-                        <Grid Margin="5,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Rectangle Width="20" Height="20" Margin="5,0"
-                                       Fill="{Binding SelectedShape.Fill, FallbackValue=Transparent}"
-                                       Stroke="Gray" StrokeThickness="1"/>
-                            <TextBlock Grid.Column="1" Text="{Binding SelectedShape.Fill, FallbackValue='Прозрачный'}"
-                                       VerticalAlignment="Center" Margin="5,0"/>
-                        </Grid>
-
-                        <!-- Цвет границы -->
-                        <TextBlock Text="Граница (цвет):" FontWeight="Bold" Margin="0,10,0,5"/>
-                        <Grid Margin="5,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Rectangle Width="20" Height="20" Margin="5,0"
-                                       Fill="{Binding SelectedShape.Stroke, FallbackValue=Black}"
-                                       Stroke="Gray" StrokeThickness="1"/>
-                            <TextBlock Grid.Column="1" Text="{Binding SelectedShape.Stroke, FallbackValue='Чёрный'}"
-                                       VerticalAlignment="Center" Margin="5,0"/>
-                        </Grid>
-
-                        <!-- Толщина границы -->
-                        <TextBlock Text="Толщина границы:" FontWeight="Bold" Margin="0,10,0,5"/>
-                        <Grid Margin="5,0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="40"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBox Grid.Column="1"
-                                     Text="{Binding SelectedShape.StrokeThickness, StringFormat={}{0:F2}, UpdateSourceTrigger=PropertyChanged}"
-                                     Margin="5,0"/>
-                        </Grid>
+                                <TextBlock Text="Размер:" Margin="0,10,0,5"/>
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding SelectedShape.SelectedPoint.Radius, StringFormat={}{0:F2}, UpdateSourceTrigger=PropertyChanged}"
+                                         Margin="5,0"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </ScrollViewer>
             </Grid>
         </Border>
 
         <!-- Нижняя панель -->
-        <Border Grid.Row="2" Grid.ColumnSpan="3"
-                BorderBrush="Gray" 
-                BorderThickness="1" 
-                Margin="5"
-                Padding="10">
+        <Border Grid.Row="2" Grid.ColumnSpan="3" BorderBrush="Gray" BorderThickness="1" Margin="5" Padding="10">
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="Фигура: " VerticalAlignment="Center" Margin="5"/>
-
                 <ComboBox ItemsSource="{Binding ShapeTypes}"
                           SelectedItem="{Binding SelectedShapeType}"
-                          Width="120"
-                          Margin="5"/>
-
-                <Button Content="Добавить" 
-                        Command="{Binding AddShapeCommand}" 
-                        Padding="15,5"
-                        Margin="10,5"/>
-
+                          Width="120" Margin="5"/>
+                <Button Content="Добавить" Command="{Binding AddShapeCommand}" Padding="15,5" Margin="10,5"/>
                 <TextBlock Text=" | " VerticalAlignment="Center" Margin="10,0"/>
                 <TextBlock Text="Информация: " VerticalAlignment="Center"/>
-                <TextBlock Text="{Binding SelectedShape.DisplayName, FallbackValue='Не выбрано'}" 
-                           VerticalAlignment="Center" 
-                           Margin="5,0"
-                           FontWeight="Bold"/>
+                <TextBlock Text="{Binding SelectedShape.DisplayName, FallbackValue='Не выбрано'}"
+                           VerticalAlignment="Center" Margin="5,0" FontWeight="Bold"/>
             </StackPanel>
         </Border>
     </Grid>
