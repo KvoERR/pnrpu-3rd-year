@@ -213,6 +213,7 @@ namespace DrawERR.ViewModels
                 ShapeType.Point => new PointShape(),
                 ShapeType.Line => new LineShape(),
                 ShapeType.Triangle => new TriangleShape(),
+                ShapeType.Tetrahedron => new TetrahedronShape(),
                 _ => new PointShape()
             };
 
@@ -224,6 +225,12 @@ namespace DrawERR.ViewModels
             if (shape is TriangleShape)
             {
                 var colors = new[] { Colors.Orange, Colors.Gold, Colors.Goldenrod, Colors.DarkOrange, Colors.SandyBrown };
+                foreach (var p in shape.Points)
+                    p.Fill = new SolidColorBrush(colors[_random.Next(colors.Length)]);
+            }
+            else if (shape is TetrahedronShape)
+            {
+                var colors = new[] { Colors.Purple, Colors.DarkViolet, Colors.MediumPurple, Colors.Plum, Colors.Violet };
                 foreach (var p in shape.Points)
                     p.Fill = new SolidColorBrush(colors[_random.Next(colors.Length)]);
             }
@@ -681,6 +688,7 @@ namespace DrawERR.ViewModels
                 ShapeType.Point => new PointShape(),
                 ShapeType.Line => new LineShape(),
                 ShapeType.Triangle => new TriangleShape(),
+                ShapeType.Tetrahedron => new TetrahedronShape(),
                 _ => new PointShape()
             };
 

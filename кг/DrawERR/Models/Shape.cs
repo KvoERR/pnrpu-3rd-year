@@ -9,7 +9,8 @@ namespace DrawERR.Models
     {
         Point,
         Line,
-        Triangle
+        Triangle,
+        Tetrahedron
     }
 
     // Точка фигуры
@@ -241,6 +242,37 @@ namespace DrawERR.Models
             Points[0].Position = p1;
             Points[1].Position = p2;
             Points[2].Position = p3;
+        }
+    }
+
+    // ========== ТЕТРАЭДР (4 точки + 6 линий между ними) ==========
+    public class TetrahedronShape : ShapeItem
+    {
+        public TetrahedronShape()
+        {
+            Type = ShapeType.Tetrahedron;
+
+            // 4 точки тетраэдра (2D-проекция)
+            Points.Add(new ShapePoint(0, -30) { Fill = new SolidColorBrush(Colors.Purple) });   // вершина 0
+            Points.Add(new ShapePoint(-30, 15) { Fill = new SolidColorBrush(Colors.Purple) });   // вершина 1
+            Points.Add(new ShapePoint(30, 15) { Fill = new SolidColorBrush(Colors.Purple) });    // вершина 2
+            Points.Add(new ShapePoint(0, 35) { Fill = new SolidColorBrush(Colors.Purple) });     // вершина 3
+
+            // 6 линий: все пары вершин (0→1, 0→2, 0→3, 1→2, 1→3, 2→3)
+            Lines.Add(new ShapeLine(0, 1) { Stroke = new SolidColorBrush(Colors.Black), StrokeThickness = 2 });
+            Lines.Add(new ShapeLine(0, 2) { Stroke = new SolidColorBrush(Colors.Black), StrokeThickness = 2 });
+            Lines.Add(new ShapeLine(0, 3) { Stroke = new SolidColorBrush(Colors.Black), StrokeThickness = 2 });
+            Lines.Add(new ShapeLine(1, 2) { Stroke = new SolidColorBrush(Colors.Black), StrokeThickness = 2 });
+            Lines.Add(new ShapeLine(1, 3) { Stroke = new SolidColorBrush(Colors.Black), StrokeThickness = 2 });
+            Lines.Add(new ShapeLine(2, 3) { Stroke = new SolidColorBrush(Colors.Black), StrokeThickness = 2 });
+        }
+
+        public TetrahedronShape(Point p1, Point p2, Point p3, Point p4) : this()
+        {
+            Points[0].Position = p1;
+            Points[1].Position = p2;
+            Points[2].Position = p3;
+            Points[3].Position = p4;
         }
     }
 }
