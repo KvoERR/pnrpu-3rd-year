@@ -1,32 +1,51 @@
 from pathlib import Path
 
-from password_hash import (
-    DEFAULT_ITERATIONS,
-    PasswordError,
-    hash_from_hex,
-    hash_password,
-    hash_to_hex,
-    verify_password,
-)
+import otp
 
 
-class AppError(Exception):
-    pass
+class OtpFileError(Exception):
+    """Ошибка файловых операций."""
 
 
-def create_hash(password: str, iterations: int = DEFAULT_ITERATIONS) -> str:
-    stored = hash_password(password, iterations=iterations)
-    return hash_to_hex(stored)
+def encrypt_file(input_path: str, output_path: str) -> dict:
+    """
+    Шифрует файл. Сохраняет шифротекст и гамму в один файл:
+    [8 байт: длина гаммы][гамма][шифротекст].
+    """
+    source = Path(input_path).read_bytes()
+    if not source:
+        raise OtpFileError("Входной файл пуст")
+
+    ciphertext, gamma = otp.encrypt(source)
+
+    payload = bytearray()
+    payload.extend(len(gamma).to_bytes(8, "big"))
+    payload.extend(gamma)
+    payload.extend(ciphertext)
+
+    Path(output_path).write_bytes(payload)
+
+    return {
+        "original": len(source),
+        "padded": len(gamma),
+        "ciphertext": len(ciphertext),
+        "gamma": len(gamma),
+    }
 
 
-def check_password(password: str, stored_hex: str, iterations: int = DEFAULT_ITERATIONS) -> bool:
-    stored = hash_from_hex(stored_hex)
-    return verify_password(password, stored, iterations=iterations)
+def decrypt_file(input_path: str, output_path: str) -> int:
+    """Дешифрует файл. Читает длину гаммы, гамму и шифротекст."""
+    packed = Path(input_path).read_bytes()
+    if len(packed) < 8:
+        raise OtpFileError("Файл слишком короткий")
 
+    gamma_length = int.from_bytes(packed[:8], "big")
+    if len(packed) < 8 + gamma_length:
+        raise OtpFileError("Файл повреждён: не хватает гаммы")
 
-def save_hash(path: str, stored_hex: str) -> None:
-    Path(path).write_text(stored_hex, encoding="ascii")
+    gamma = packed[8:8 + gamma_length]
+    ciphertext = packed[8 + gamma_length:]
 
-
-def load_hash(path: str) -> str:
-    return Path(path).read_text(encoding="ascii").strip()
+    restored = otp.decrypt(ciphertext, gamma)
+    Path(output_path).write_bytes(restored)
+    return len(restored)

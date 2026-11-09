@@ -1,14 +1,14 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 
-from main import AppError, check_password, create_hash, load_hash, save_hash
-from password_hash import DEFAULT_ITERATIONS, MAX_PASSWORD_LENGTH, PasswordError
+from main import OtpFileError, decrypt_file, encrypt_file
+from otp import OtpError
 
 
-class HashApp:
+class OtpApp:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
-        self.root.title("Хеширование паролей (DES-32)")
+        self.root.title("Однократное гаммирование (блоки 64 бита)")
         self.root.geometry("760x560")
         self.root.resizable(True, True)
 
@@ -17,140 +17,114 @@ class HashApp:
         root.grid_rowconfigure(0, weight=1)
         root.grid_columnconfigure(0, weight=1)
 
-        self._build_hash_tab(notebook)
-        self._build_verify_tab(notebook)
+        self._build_encrypt_tab(notebook)
+        self._build_decrypt_tab(notebook)
 
-    def _build_hash_tab(self, notebook: ttk.Notebook) -> None:
+    def _build_encrypt_tab(self, notebook: ttk.Notebook) -> None:
         frame = ttk.Frame(notebook)
-        notebook.add(frame, text="Хеширование")
+        notebook.add(frame, text="Шифрование")
 
-        ttk.Label(frame, text="Пароль:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
-        self.hash_password_entry = tk.Entry(frame, width=40, show="*")
-        self.hash_password_entry.grid(row=0, column=1, padx=5, pady=5)
-        ttk.Button(frame, text="Показать", command=lambda: self._toggle_show(self.hash_password_entry)).grid(row=0, column=2, padx=5)
+        ttk.Label(frame, text="Входной файл:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        self.enc_input = tk.Entry(frame, width=60)
+        self.enc_input.grid(row=0, column=1, padx=5, pady=5)
+        ttk.Button(frame, text="Обзор", command=lambda: self._browse_open(self.enc_input)).grid(row=0, column=2, padx=5)
 
-        ttk.Label(frame, text=f"Максимум {MAX_PASSWORD_LENGTH} символов", foreground="gray").grid(row=1, column=1, sticky="w", padx=5)
+        ttk.Label(frame, text="Выходной файл:").grid(row=1, column=0, sticky="w", padx=5, pady=5)
+        self.enc_output = tk.Entry(frame, width=60)
+        self.enc_output.grid(row=1, column=1, padx=5, pady=5)
+        ttk.Button(frame, text="Обзор", command=lambda: self._browse_save(self.enc_output)).grid(row=1, column=2, padx=5)
 
-        ttk.Label(frame, text="Итераций:").grid(row=2, column=0, sticky="w", padx=5, pady=5)
-        self.hash_iterations_entry = tk.Entry(frame, width=10)
-        self.hash_iterations_entry.grid(row=2, column=1, sticky="w", padx=5, pady=5)
-        self.hash_iterations_entry.insert(0, str(DEFAULT_ITERATIONS))
+        ttk.Button(frame, text="Зашифровать файл", command=self._run_encrypt).grid(row=2, column=1, pady=15)
 
-        ttk.Button(frame, text="Вычислить хеш", command=self._run_hash).grid(row=3, column=1, pady=10)
+        self.enc_status = ttk.Label(frame, text="", foreground="gray", wraplength=700)
+        self.enc_status.grid(row=3, column=0, columnspan=3, padx=5, pady=5, sticky="w")
 
-        ttk.Label(frame, text="Хеш (hex):").grid(row=4, column=0, sticky="w", padx=5, pady=5)
-        self.hash_result_entry = tk.Entry(frame, width=40)
-        self.hash_result_entry.grid(row=4, column=1, padx=5, pady=5)
+        self.enc_result = tk.Text(frame, height=8, width=80, state="disabled")
+        self.enc_result.grid(row=4, column=0, columnspan=3, padx=5, pady=10)
 
-        ttk.Button(frame, text="Сохранить хеш в файл", command=self._save_hash).grid(row=5, column=1, pady=5)
-
-        self.hash_status = ttk.Label(frame, text="", foreground="gray", wraplength=700)
-        self.hash_status.grid(row=6, column=0, columnspan=3, padx=5, pady=5, sticky="w")
-
-    def _build_verify_tab(self, notebook: ttk.Notebook) -> None:
+    def _build_decrypt_tab(self, notebook: ttk.Notebook) -> None:
         frame = ttk.Frame(notebook)
-        notebook.add(frame, text="Проверка")
+        notebook.add(frame, text="Дешифрование")
 
-        ttk.Label(frame, text="Пароль:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
-        self.verify_password_entry = tk.Entry(frame, width=40, show="*")
-        self.verify_password_entry.grid(row=0, column=1, padx=5, pady=5)
-        ttk.Button(frame, text="Показать", command=lambda: self._toggle_show(self.verify_password_entry)).grid(row=0, column=2, padx=5)
+        ttk.Label(frame, text="Входной файл:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        self.dec_input = tk.Entry(frame, width=60)
+        self.dec_input.grid(row=0, column=1, padx=5, pady=5)
+        ttk.Button(frame, text="Обзор", command=lambda: self._browse_open(self.dec_input)).grid(row=0, column=2, padx=5)
 
-        ttk.Label(frame, text="Хеш (hex):").grid(row=1, column=0, sticky="w", padx=5, pady=5)
-        self.verify_hash_entry = tk.Entry(frame, width=40)
-        self.verify_hash_entry.grid(row=1, column=1, padx=5, pady=5)
-        ttk.Button(frame, text="Загрузить из файла", command=self._load_hash).grid(row=1, column=2, padx=5)
+        ttk.Label(frame, text="Выходной файл:").grid(row=1, column=0, sticky="w", padx=5, pady=5)
+        self.dec_output = tk.Entry(frame, width=60)
+        self.dec_output.grid(row=1, column=1, padx=5, pady=5)
+        ttk.Button(frame, text="Обзор", command=lambda: self._browse_save(self.dec_output)).grid(row=1, column=2, padx=5)
 
-        ttk.Label(frame, text="Итераций:").grid(row=2, column=0, sticky="w", padx=5, pady=5)
-        self.verify_iterations_entry = tk.Entry(frame, width=10)
-        self.verify_iterations_entry.grid(row=2, column=1, sticky="w", padx=5, pady=5)
-        self.verify_iterations_entry.insert(0, str(DEFAULT_ITERATIONS))
+        ttk.Button(frame, text="Расшифровать файл", command=self._run_decrypt).grid(row=2, column=1, pady=15)
 
-        ttk.Button(frame, text="Проверить", command=self._run_verify).grid(row=3, column=1, pady=10)
+        self.dec_status = ttk.Label(frame, text="", foreground="gray", wraplength=700)
+        self.dec_status.grid(row=3, column=0, columnspan=3, padx=5, pady=5, sticky="w")
 
-        self.verify_status = ttk.Label(frame, text="", foreground="gray", wraplength=700)
-        self.verify_status.grid(row=4, column=0, columnspan=3, padx=5, pady=5, sticky="w")
+        self.dec_result = tk.Text(frame, height=8, width=80, state="disabled")
+        self.dec_result.grid(row=4, column=0, columnspan=3, padx=5, pady=10)
 
-    def _toggle_show(self, entry: tk.Entry) -> None:
-        entry.config(show="" if entry.cget("show") else "*")
+    def _browse_open(self, entry: tk.Entry) -> None:
+        path = filedialog.askopenfilename()
+        if path:
+            entry.delete(0, "end")
+            entry.insert(0, path)
 
-    def _read_iterations(self, entry: tk.Entry):
-        try:
-            value = int(entry.get().strip())
-        except ValueError:
-            messagebox.showerror("Ошибка", "Итераций должно быть целое число")
-            return None
-        if value < 1:
-            messagebox.showerror("Ошибка", "Итераций должно быть ≥ 1")
-            return None
-        return value
+    def _browse_save(self, entry: tk.Entry) -> None:
+        path = filedialog.asksaveasfilename()
+        if path:
+            entry.delete(0, "end")
+            entry.insert(0, path)
 
-    def _run_hash(self) -> None:
-        password = self.hash_password_entry.get()
-        if not password:
-            messagebox.showerror("Ошибка", "Введите пароль")
-            return
-        iterations = self._read_iterations(self.hash_iterations_entry)
-        if iterations is None:
-            return
+    def _show(self, widget: tk.Text, text: str) -> None:
+        widget.config(state="normal")
+        widget.delete("1.0", "end")
+        widget.insert("1.0", text)
+        widget.config(state="disabled")
 
-        try:
-            stored = create_hash(password, iterations=iterations)
-            self.hash_result_entry.delete(0, "end")
-            self.hash_result_entry.insert(0, stored)
-            self.hash_status.config(text=f"Хеш вычислен ({len(stored) // 2} байт)", foreground="green")
-        except (PasswordError, AppError) as error:
-            messagebox.showerror("Ошибка", str(error))
-            self.hash_status.config(text="Ошибка", foreground="red")
-
-    def _run_verify(self) -> None:
-        password = self.verify_password_entry.get()
-        stored_hex = self.verify_hash_entry.get().strip()
-        if not password or not stored_hex:
-            messagebox.showerror("Ошибка", "Введите пароль и хеш")
-            return
-        iterations = self._read_iterations(self.verify_iterations_entry)
-        if iterations is None:
+    def _run_encrypt(self) -> None:
+        source = self.enc_input.get().strip()
+        target = self.enc_output.get().strip()
+        if not source or not target:
+            messagebox.showerror("Ошибка", "Укажите входной и выходной файлы")
             return
 
         try:
-            ok = check_password(password, stored_hex, iterations=iterations)
-            if ok:
-                self.verify_status.config(text="Пароль верный", foreground="green")
-            else:
-                self.verify_status.config(text="Пароль неверный", foreground="red")
-        except (PasswordError, AppError) as error:
-            messagebox.showerror("Ошибка", str(error))
-            self.verify_status.config(text="Ошибка", foreground="red")
+            stats = encrypt_file(source, target)
+            self.enc_status.config(text="Готово", foreground="green")
+            self._show(
+                self.enc_result,
+                f"Исходный размер:    {stats['original']} байт\n"
+                f"После дополнения:   {stats['padded']} байт\n"
+                f"Гамма:              {stats['gamma']} байт\n"
+                f"Шифротекст:         {stats['ciphertext']} байт\n"
+                f"Файл:               {target}"
+            )
+        except (OtpError, OtpFileError, OSError) as error:
+            messagebox.showerror("Ошибка шифрования", str(error))
+            self.enc_status.config(text="Ошибка", foreground="red")
 
-    def _save_hash(self) -> None:
-        stored = self.hash_result_entry.get().strip()
-        if not stored:
-            messagebox.showerror("Ошибка", "Сначала вычислите хеш")
+    def _run_decrypt(self) -> None:
+        source = self.dec_input.get().strip()
+        target = self.dec_output.get().strip()
+        if not source or not target:
+            messagebox.showerror("Ошибка", "Укажите входной и выходной файлы")
             return
-        path = filedialog.asksaveasfilename(defaultextension=".hash")
-        if not path:
-            return
-        try:
-            save_hash(path, stored)
-            self.hash_status.config(text=f"Сохранено: {path}", foreground="green")
-        except OSError as error:
-            messagebox.showerror("Ошибка", str(error))
 
-    def _load_hash(self) -> None:
-        path = filedialog.askopenfilename(filetypes=[("Hash files", "*.hash"), ("All files", "*.*")])
-        if not path:
-            return
         try:
-            stored = load_hash(path)
-            self.verify_hash_entry.delete(0, "end")
-            self.verify_hash_entry.insert(0, stored)
-            self.verify_status.config(text=f"Загружено: {path}", foreground="green")
-        except OSError as error:
-            messagebox.showerror("Ошибка", str(error))
+            size = decrypt_file(source, target)
+            self.dec_status.config(text="Готово", foreground="green")
+            self._show(
+                self.dec_result,
+                f"Восстановлено: {size} байт\n"
+                f"Файл:          {target}"
+            )
+        except (OtpError, OtpFileError, OSError) as error:
+            messagebox.showerror("Ошибка дешифрования", str(error))
+            self.dec_status.config(text="Ошибка", foreground="red")
 
 
 if __name__ == "__main__":
     root = tk.Tk()
-    HashApp(root)
+    OtpApp(root)
     root.mainloop()
