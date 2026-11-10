@@ -5,13 +5,13 @@ namespace KostyaBankApp.ViewModels;
 
 /// <summary>
 /// ViewModel для ввода карты и PIN-кода.
-/// 3 неверных PIN — карта блокируется и попадает в хранилище.
+/// Зависит от INavigationService (DIP), а не от AppViewModel.
 /// </summary>
 public class CardEntryViewModel : BaseViewModel
 {
-    private readonly Computer _computer;
-    private readonly CardStorage _cardStorage;
-    private readonly AppViewModel _appViewModel;
+    private readonly ICardRepository _cardRepository;
+    private readonly ICardStorageRepository _cardStorageRepository;
+    private readonly INavigationService _navigation;
     private string _cardNumber = string.Empty;
     private string _pinCode = string.Empty;
     private string _statusText = string.Empty;
@@ -20,13 +20,13 @@ public class CardEntryViewModel : BaseViewModel
     private bool _showError;
     private int _failedAttempts;
     private const int MaxAttempts = 3;
-    private readonly ICommand _loginCommand;
+    private ICommand _loginCommand;
 
-    public CardEntryViewModel(AppViewModel appViewModel)
+    public CardEntryViewModel(ICardRepository cardRepository, ICardStorageRepository cardStorageRepository, INavigationService navigation)
     {
-        _computer = new Computer();
-        _cardStorage = new CardStorage();
-        _appViewModel = appViewModel;
+        _cardRepository = cardRepository ?? throw new ArgumentNullException(nameof(cardRepository));
+        _cardStorageRepository = cardStorageRepository ?? throw new ArgumentNullException(nameof(cardStorageRepository));
+        _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
         _loginCommand = new SimpleCommand(ExecuteLogin, () => _canLogin);
         UpdateStatus();
     }
@@ -38,7 +38,6 @@ public class CardEntryViewModel : BaseViewModel
         {
             if (_cardNumber == value) return;
             
-            // Сбрасываем состояние блокировки при вводе нового номера
             if (!string.IsNullOrEmpty(value) && (string.IsNullOrEmpty(_cardNumber) || _cardNumber.Length != value.Length || _cardNumber != value))
             {
                 ShowError = false;
@@ -48,10 +47,9 @@ public class CardEntryViewModel : BaseViewModel
             _cardNumber = value;
             OnPropertyChanged();
 
-            // Если карта заблокирована — блокируем ввод
             if (!string.IsNullOrEmpty(value) && value.Length == 16)
             {
-                var blockedCard = _cardStorage.GetCardByNumber(value);
+                var blockedCard = _cardStorageRepository.GetCardByNumber(value);
                 if (blockedCard != null)
                 {
                     ShowError = true;
@@ -111,8 +109,7 @@ public class CardEntryViewModel : BaseViewModel
 
     private void ExecuteLogin()
     {
-        // Проверка на заблокированную карту
-        if (CardNumber.Length == 16 && _cardStorage.GetCardByNumber(CardNumber) != null)
+        if (CardNumber.Length == 16 && _cardStorageRepository.GetCardByNumber(CardNumber) != null)
         {
             ShowError = true;
             ErrorText = "Карта заблокирована и помещена в хранилище";
@@ -120,7 +117,6 @@ public class CardEntryViewModel : BaseViewModel
             return;
         }
 
-        // Проверка номера карты
         if (CardNumber.Length != 16 || !CardNumber.All(char.IsDigit))
         {
             ShowError = true;
@@ -130,7 +126,6 @@ public class CardEntryViewModel : BaseViewModel
             return;
         }
 
-        // Проверка PIN
         if (string.IsNullOrEmpty(PinCode) || PinCode.Length != 4 || !PinCode.All(char.IsDigit))
         {
             ShowError = true;
@@ -140,7 +135,7 @@ public class CardEntryViewModel : BaseViewModel
             return;
         }
 
-        var card = _computer.GetCardByNumber(CardNumber);
+        var card = _cardRepository.GetCardByNumber(CardNumber);
 
         if (card == null)
         {
@@ -151,7 +146,6 @@ public class CardEntryViewModel : BaseViewModel
             return;
         }
 
-        // Проверка PIN-кода
         if (card.PinCode != PinCode)
         {
             _failedAttempts++;
@@ -159,14 +153,12 @@ public class CardEntryViewModel : BaseViewModel
 
             if (_failedAttempts >= MaxAttempts)
             {
-                // Карта заблокирована — помещаем в хранилище
-                _cardStorage.AddCard(card);
+                _cardStorageRepository.AddCard(card);
                 ShowError = true;
                 CanLogin = false;
                 ErrorText = $"Карта заблокирована после {MaxAttempts} неверных попыток. Карта помещена в хранилище.";
                 StatusText = "🔒 Карта заблокирована";
                 _failedAttempts = 0;
-                // Не очищаем поля — пользователь должен увидеть сообщение
             }
             else
             {
@@ -178,9 +170,8 @@ public class CardEntryViewModel : BaseViewModel
             return;
         }
 
-        // Успешный вход
         _failedAttempts = 0;
-        _appViewModel.ShowMainMenu(card);
+        _navigation.ShowMainMenu(card);
     }
 
     private void UpdateStatus()

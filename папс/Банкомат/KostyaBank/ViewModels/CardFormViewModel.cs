@@ -6,7 +6,6 @@ namespace KostyaBankApp.ViewModels;
 
 /// <summary>
 /// Base class for card operation forms.
-/// Provides card info, action button, print checkbox, and message area.
 /// </summary>
 public abstract class CardFormViewModel : BaseViewModel
 {
@@ -21,9 +20,9 @@ public abstract class CardFormViewModel : BaseViewModel
     protected CardFormViewModel(Card card, AppViewModel appViewModel)
     {
         Card = card ?? throw new ArgumentNullException(nameof(card));
-        AppViewModel = appViewModel;
+        AppViewModel = appViewModel ?? throw new ArgumentNullException(nameof(appViewModel));
 
-        _backCommand = new SimpleCommand(() => AppViewModel.ShowMainMenu(Card));
+        _backCommand = new SimpleCommand(() => AppViewModel.Show(new CardEntryViewModel { AppViewModel = AppViewModel }));
         _actionCommand = new SimpleCommand(() =>
         {
             ExecuteAction();
@@ -80,10 +79,7 @@ public abstract class CardFormViewModel : BaseViewModel
 
     /// <summary>
     /// Вызывается при нажатии кнопки действия, если включена печать чека.
-    /// Переопределяется в наследниках для формирования своего чека.
+    /// Переопределяется в наследниках.
     /// </summary>
-    protected virtual void OnPrintReceipt()
-    {
-        // По умолчанию ничего не печатает
-    }
+    protected virtual void OnPrintReceipt() { }
 }

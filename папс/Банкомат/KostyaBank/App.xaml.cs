@@ -31,15 +31,13 @@ public partial class App : Application
     {
         Log.Write("=== App started ===");
 
-        // Global error handler
         DispatcherUnhandledException += App_DispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
         
         base.OnStartup(e);
 
-        Log.Write("Creating AppViewModel...");
         var appViewModel = new AppViewModel();
-        Log.Write("Creating MainWindow...");
+        
         var mainWindow = new Views.MainWindow();
         mainWindow.DataContext = appViewModel;
         mainWindow.Show();

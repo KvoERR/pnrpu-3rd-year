@@ -1,19 +1,18 @@
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System;
 
 namespace KostyaBankApp.Models;
 
 /// <summary>
-/// Принтер для формирования и сохранения чека/справки в текстовый файл.
+/// Принтер для формирования и сохранения чеков/справок.
+/// Реализует IReceiptPrinter.
 /// </summary>
-public class Printer
+public class ExcelPrinter : IReceiptPrinter
 {
     private readonly string _outputPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Output");
 
-    /// <summary>
-    /// Формирует чек операции снятия наличных и сохраняет в файл.
-    /// </summary>
     public string SaveWithdrawDoc(decimal amount, Card card, DateTime transactionDate)
     {
         var sb = new StringBuilder();
@@ -45,9 +44,6 @@ public class Printer
         return filePath;
     }
 
-    /// <summary>
-    /// Формирует справку о балансе карты и сохраняет в файл.
-    /// </summary>
     public string SaveBalanceDoc(Card card, DateTime transactionDate)
     {
         var sb = new StringBuilder();

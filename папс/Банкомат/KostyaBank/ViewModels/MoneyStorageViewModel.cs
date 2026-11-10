@@ -11,7 +11,7 @@ namespace KostyaBankApp.ViewModels;
 /// </summary>
 public class MoneyStorageViewModel : BaseViewModel
 {
-    private readonly MoneyStorage _moneyStorage;
+    private readonly IMoneyStorageRepository _moneyStorage;
     private readonly AppViewModel _appViewModel;
     private readonly ICommand _backCommand;
     private readonly ICommand _loadAllCommand;
@@ -23,14 +23,14 @@ public class MoneyStorageViewModel : BaseViewModel
 
     public MoneyStorageViewModel(AppViewModel appViewModel)
     {
-        _appViewModel = appViewModel;
-        _moneyStorage = appViewModel.MoneyStorage;
-        _backCommand = new SimpleCommand(() => _appViewModel.ShowServiceView());
+        _appViewModel = appViewModel ?? throw new ArgumentNullException(nameof(appViewModel));
+        var model = new MoneyStorageModel();
+        _moneyStorage = new MoneyStorageRepository(model);
+        _backCommand = new SimpleCommand(() => _appViewModel.Show(ServiceViewModelFactory.Create(_appViewModel)));
         _loadAllCommand = new SimpleCommand(() => LoadAllMoney(), () => HasAnyEntries());
         _unloadAllCommand = new SimpleCommand(() => UnloadAllMoney(), () => HasAnyEntries());
         _clearCommand = new SimpleCommand(() => ClearStorage(), () => _moneyStorage.SumMoney() > 0);
 
-        // Инициализация коллекции по всем номиналам
         MoneyEntries = new ObservableCollection<Money>
         {
             new Money { Amount = 50 },
@@ -41,7 +41,6 @@ public class MoneyStorageViewModel : BaseViewModel
             new Money { Amount = 5000 }
         };
 
-        // Подписка на изменения Count
         foreach (var money in MoneyEntries)
             money.PropertyChanged += OnMoneyEntryChanged;
 
@@ -80,7 +79,7 @@ public class MoneyStorageViewModel : BaseViewModel
             {
                 _moneyStorage.AddMoney(money.Amount, money.Count);
                 details.Add($"{money.Count} × {money.Amount} руб.");
-                money.Count = 0; // Сброс после загрузки
+                money.Count = 0;
             }
         }
         ReloadFromExcel();
@@ -100,7 +99,7 @@ public class MoneyStorageViewModel : BaseViewModel
                 if (toUnload == 0) continue;
                 _moneyStorage.RemoveMoney(money.Amount, toUnload);
                 details.Add($"{toUnload} × {money.Amount} руб.");
-                money.Count -= toUnload; // Уменьшаем на невыгруженное
+                money.Count -= toUnload;
             }
         }
         if (details.Count > 0)
@@ -121,9 +120,6 @@ public class MoneyStorageViewModel : BaseViewModel
 
     private void UpdateTotal() => TotalText = _moneyStorage.SumMoney().ToString();
 
-    /// <summary>
-    /// Перезагружает Count из MoneyStorage (Excel) в MoneyEntries.
-    /// </summary>
     private void ReloadFromExcel()
     {
         _moneyStorage.ReloadFromExcel();

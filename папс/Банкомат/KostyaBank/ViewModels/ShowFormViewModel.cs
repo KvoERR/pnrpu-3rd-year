@@ -8,12 +8,12 @@ namespace KostyaBankApp.ViewModels;
 /// </summary>
 public class ShowFormViewModel : CardFormViewModel
 {
-    private readonly Printer _printer;
+    private readonly IReceiptPrinter _printer;
 
-    public ShowFormViewModel(Card card, AppViewModel appViewModel, Printer? printer = null)
+    public ShowFormViewModel(Card card, AppViewModel appViewModel)
         : base(card, appViewModel)
     {
-        _printer = printer ?? new Printer();
+        _printer = new ExcelPrinter();
     }
 
     public override string ActionButtonText => "Обновить баланс";

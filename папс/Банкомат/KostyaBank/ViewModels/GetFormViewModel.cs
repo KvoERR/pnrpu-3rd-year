@@ -10,16 +10,16 @@ namespace KostyaBankApp.ViewModels;
 /// </summary>
 public class GetFormViewModel : CardFormViewModel
 {
-    private readonly Printer _printer;
-    private readonly AppViewModel _appViewModel;
+    private readonly IReceiptPrinter _printer;
+    private readonly IMoneyStorageRepository _moneyStorage;
     private string _withdrawAmount = string.Empty;
     private ICommand _actionCommand;
 
-    public GetFormViewModel(Card card, AppViewModel appViewModel, Printer? printer = null)
+    public GetFormViewModel(Card card, AppViewModel appViewModel)
         : base(card, appViewModel)
     {
-        _printer = printer ?? new Printer();
-        _appViewModel = appViewModel;
+        _printer = new ExcelPrinter();
+        _moneyStorage = new MoneyStorageRepository(new MoneyStorageModel());
         _actionCommand = base.ActionCommand;
     }
 
@@ -60,10 +60,7 @@ public class GetFormViewModel : CardFormViewModel
 
         try
         {
-            // Снимаем из хранилища банкомата
-            _appViewModel.MoneyStorage.TakeMoney((int)amount);
-
-            // Списываем с баланса карты
+            _moneyStorage.TakeMoney((int)amount);
             Card.Balance -= amount;
 
             ShowMessage($"Выдано {amount:C}. Остаток на карте: {Card.Balance:C}");

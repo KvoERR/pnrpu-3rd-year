@@ -1,15 +1,14 @@
-using KostyaBankApp.Models;
+using System.Windows;
 
 namespace KostyaBankApp.ViewModels;
 
 /// <summary>
-/// Manages navigation between views in the single MainWindow.
+/// Навигатор экранов. Реализует INavigationService (DIP).
+/// Создание VMs делегировано фабрикам (SRP).
 /// </summary>
-public class AppViewModel : BaseViewModel
+public class AppViewModel : BaseViewModel, INavigationService
 {
     private object _currentView;
-    public MoneyStorage MoneyStorage { get; } = new MoneyStorage();
-
     public object CurrentView
     {
         get => _currentView;
@@ -18,67 +17,53 @@ public class AppViewModel : BaseViewModel
 
     public AppViewModel()
     {
-        CurrentView = new CardEntryViewModel(this);
+        CurrentView = CardEntryViewModelFactory.Create(this);
     }
 
     public void ShowCardEntry()
     {
-        CurrentView = new CardEntryViewModel(this);
+        CurrentView = CardEntryViewModelFactory.Create(this);
     }
 
     public void ShowMainMenu(Card card)
     {
-        CurrentView = new MainMenuViewModel(card, this);
+        CurrentView = MainMenuViewModelFactory.Create(card, this);
     }
 
     public void ShowGetForm(Card card)
     {
-        CurrentView = new GetFormViewModel(card, this);
+        CurrentView = GetFormViewModelFactory.Create(card, this);
     }
 
     public void ShowShowForm(Card card)
     {
-        CurrentView = new ShowFormViewModel(card, this);
+        CurrentView = ShowFormViewModelFactory.Create(card, this);
     }
 
     public void ShowServiceView()
     {
-        Log.Write("ShowServiceView called");
-        try
-        {
-            var vm = new ServiceViewModel(this);
-            Log.Write("ServiceViewModel created successfully");
-            CurrentView = vm;
-            Log.Write("ServiceViewModel set as CurrentView");
-        }
-        catch (Exception ex)
-        {
-            Log.Write($"Error creating ServiceViewModel: {ex.Message}\n{ex.StackTrace}");
-            throw;
-        }
+        CurrentView = ServiceViewModelFactory.Create(this);
     }
 
     public void ShowMoneyStorage()
     {
-        CurrentView = new MoneyStorageViewModel(this);
+        CurrentView = MoneyStorageViewModelFactory.Create(this);
     }
 
     public void ShowCardStorage()
     {
-        CurrentView = new CardStorageViewModel(this);
+        CurrentView = CardStorageViewModelFactory.Create(this);
     }
 
     public void ExitApp()
     {
-        var result = System.Windows.MessageBox.Show(
+        var result = MessageBox.Show(
             "Вы уверены, что хотите выйти?",
             "Выход",
-            System.Windows.MessageBoxButton.YesNo,
-            System.Windows.MessageBoxImage.Question);
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
 
-        if (result == System.Windows.MessageBoxResult.Yes)
-        {
+        if (result == MessageBoxResult.Yes)
             System.Windows.Application.Current.Shutdown();
-        }
     }
 }

@@ -6,37 +6,28 @@ using OfficeOpenXml;
 namespace KostyaBankApp.Models;
 
 /// <summary>
-/// Хранилище карт, загружаемое из Excel-файла.
-/// Формат: Номер карты | ФИО | Баланс | Пин-код
+/// Репозиторий для хранения заблокированных карт — отвечает только за I/O (Excel).
 /// </summary>
-public class CardStorage
+public class CardStorageRepository : ICardStorageRepository
 {
     private readonly List<Card> _cards;
     private readonly string _filePath;
 
-    public CardStorage()
+    public CardStorageRepository()
     {
         _cards = new List<Card>();
-        var exeDir = AppDomain.CurrentDomain.BaseDirectory;
-        _filePath = Path.Combine(exeDir, "card_storage.xlsx");
+        _filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "card_storage.xlsx");
         LoadFromExcel();
     }
 
+    public int Count => _cards.Count;
     public IEnumerable<Card> Cards => _cards.AsReadOnly();
 
-    public int Count => _cards.Count;
-
-    /// <summary>
-    /// Находит карту по номеру.
-    /// </summary>
     public Card? GetCardByNumber(string cardNumber)
     {
         return _cards.FirstOrDefault(c => c.CardNumber == cardNumber);
     }
 
-    /// <summary>
-    /// Добавляет карту в хранилище и сохраняет в Excel.
-    /// </summary>
     public bool AddCard(Card card)
     {
         if (card == null || !card.IsValid)
@@ -50,9 +41,6 @@ public class CardStorage
         return true;
     }
 
-    /// <summary>
-    /// Удаляет карту по номеру.
-    /// </summary>
     public bool RemoveCard(string cardNumber)
     {
         var removed = _cards.RemoveAll(c => c.CardNumber == cardNumber) > 0;
@@ -61,9 +49,6 @@ public class CardStorage
         return removed;
     }
 
-    /// <summary>
-    /// Очищает хранилище и Excel.
-    /// </summary>
     public void Clear()
     {
         _cards.Clear();
@@ -111,7 +96,6 @@ public class CardStorage
         using var package = new ExcelPackage(new FileInfo(_filePath));
         var worksheet = package.Workbook.Worksheets[0];
 
-        // Очищаем данные (оставляем заголовок в строке 1)
         int maxRows = Math.Max(_cards.Count + 1, 2);
         for (int i = 2; i <= maxRows; i++)
         {
@@ -121,7 +105,6 @@ public class CardStorage
             worksheet.Cells[i, 4].Value = null;
         }
 
-        // Записываем карты
         for (int i = 0; i < _cards.Count; i++)
         {
             var card = _cards[i];

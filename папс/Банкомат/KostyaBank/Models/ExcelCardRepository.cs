@@ -6,14 +6,14 @@ using OfficeOpenXml;
 namespace KostyaBankApp.Models;
 
 /// <summary>
-/// Читает данные карт из Excel-файла с помощью EPPlus.
-/// Формат Excel: Номер карты | Имя владельца | Баланс | PIN-код
+/// Репозиторий для поиска карт в основной базе (Excel).
+/// Заменяет класс Computer.
 /// </summary>
-public class Computer
+public class ExcelCardRepository : ICardRepository
 {
     private readonly string _filePath;
 
-    public Computer()
+    public ExcelCardRepository()
     {
         var exeDir = AppDomain.CurrentDomain.BaseDirectory;
         _filePath = Path.Combine(exeDir, "comp.xlsx");

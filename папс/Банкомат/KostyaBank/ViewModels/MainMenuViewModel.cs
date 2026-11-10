@@ -10,19 +10,19 @@ namespace KostyaBankApp.ViewModels;
 public class MainMenuViewModel : BaseViewModel
 {
     private readonly Card _card;
-    private readonly AppViewModel _appViewModel;
+    private readonly INavigationService _navigation;
     private readonly ICommand _showCommand;
     private readonly ICommand _getCommand;
     private readonly ICommand _exitCommand;
 
-    public MainMenuViewModel(Card card, AppViewModel appViewModel)
+    public MainMenuViewModel(Card card, INavigationService navigation)
     {
         _card = card ?? throw new ArgumentNullException(nameof(card));
-        _appViewModel = appViewModel;
+        _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
         
-        _showCommand = new SimpleCommand(() => _appViewModel.ShowShowForm(_card));
-        _getCommand = new SimpleCommand(() => _appViewModel.ShowGetForm(_card));
-        _exitCommand = new SimpleCommand(() => ExitApp());
+        _showCommand = new SimpleCommand(() => ShowSection("Просмотр операций"));
+        _getCommand = new SimpleCommand(() => ShowSection("Платежи и переводы"));
+        _exitCommand = new SimpleCommand(() => _navigation.ShowCardEntry());
     }
 
     public string CardNumber => _card.CardNumber;
@@ -36,25 +36,11 @@ public class MainMenuViewModel : BaseViewModel
 
     private void ShowSection(string sectionName)
     {
-        System.Windows.MessageBox.Show(
+        MessageBox.Show(
             $"{sectionName}\n\nКлиент: {_card.HolderName}\nБаланс: {_card.Balance:C}\n\nЭтот раздел в разработке.",
             sectionName,
-            System.Windows.MessageBoxButton.OK,
-            System.Windows.MessageBoxImage.Information);
-    }
-
-    private void ExitApp()
-    {
-        var result = System.Windows.MessageBox.Show(
-            "Вы уверены, что хотите выйти?",
-            "Выход",
-            System.Windows.MessageBoxButton.YesNo,
-            System.Windows.MessageBoxImage.Question);
-
-        if (result == System.Windows.MessageBoxResult.Yes)
-        {
-            _appViewModel.ShowCardEntry();
-        }
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
     }
 }
 

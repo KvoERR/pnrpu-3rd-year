@@ -10,10 +10,9 @@ namespace KostyaBankApp.ViewModels;
 /// </summary>
 public class CardStorageViewModel : BaseViewModel
 {
-    private readonly CardStorage _cardStorage;
+    private readonly ICardStorageRepository _cardStorage;
     private readonly AppViewModel _appViewModel;
     private readonly ICommand _backCommand;
-    private readonly ICommand _exportCommand;
     private readonly ICommand _clearCommand;
     private string _statusText = string.Empty;
     private Visibility _statusVisibility = Visibility.Collapsed;
@@ -21,12 +20,11 @@ public class CardStorageViewModel : BaseViewModel
 
     public CardStorageViewModel(AppViewModel appViewModel)
     {
-        _appViewModel = appViewModel;
-        _cardStorage = new CardStorage();
-        _backCommand = new SimpleCommand(() => _appViewModel.ShowServiceView());
+        _appViewModel = appViewModel ?? throw new ArgumentNullException(nameof(appViewModel));
+        _cardStorage = new CardStorageRepository();
+        _backCommand = new SimpleCommand(() => _appViewModel.Show(ServiceViewModelFactory.Create(_appViewModel)));
         _clearCommand = new SimpleCommand(() => ClearStorage(), () => _cardStorage.Count > 0);
 
-        // Данные загружаются из Excel автоматически
         foreach (var card in _cardStorage.Cards)
             Cards.Add(card);
         CountText = Cards.Count.ToString();
@@ -52,7 +50,6 @@ public class CardStorageViewModel : BaseViewModel
         private set => SetProperty(ref _statusVisibility, value);
     }
 
-    public bool CanExecuteExport => _cardStorage.Count > 0;
     public bool CanExecuteClear => _cardStorage.Count > 0;
 
     public ICommand BackCommand => _backCommand;
