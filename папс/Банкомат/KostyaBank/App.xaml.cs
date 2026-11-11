@@ -1,6 +1,9 @@
 ﻿using System.Windows;
 using System.Windows.Threading;
+using KostyaBankApp.Models;
+using KostyaBankApp.Services;
 using KostyaBankApp.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace KostyaBankApp;
 
@@ -36,10 +39,43 @@ public partial class App : Application
         
         base.OnStartup(e);
 
-        var appViewModel = new AppViewModel();
-        
+        // Создаём зависимости (DIP)
+        var cardRepository = new ExcelCardRepository();
+        var cardStorageRepository = new CardStorageRepository();
+        var moneyStorageModel = new MoneyStorageModel();
+        var moneyStorageRepository = new MoneyStorageRepository(moneyStorageModel);
+
+        // DI-контейнер: регистрируем сервисы и VMs
+        var services = new ServiceCollection();
+        services.AddSingleton<ICardRepository>(cardRepository);
+        services.AddSingleton<ICardStorageRepository>(cardStorageRepository);
+        services.AddSingleton<IMoneyStorageRepository>(moneyStorageRepository);
+        services.AddSingleton<INavigationService, NavigationService>();
+        services.AddTransient<CardEntryViewModel>();
+        services.AddTransient<MainMenuViewModel>();
+        services.AddTransient<GetFormViewModel>();
+        services.AddTransient<ShowFormViewModel>();
+        services.AddTransient<ServiceViewModel>();
+        services.AddTransient<MoneyStorageViewModel>();
+        services.AddTransient<CardStorageViewModel>();
+
+        var serviceProvider = services.BuildServiceProvider();
+
+        // Создаём навигатор (он же DataContext)
+        var navigation = serviceProvider.GetRequiredService<INavigationService>() as NavigationService
+            ?? throw new InvalidOperationException("NavigationService not found");
+        navigation.RegisterRoute("cardEntry", typeof(CardEntryViewModel));
+        navigation.RegisterRoute("mainMenu", typeof(MainMenuViewModel));
+        navigation.RegisterRoute("getForm", typeof(GetFormViewModel));
+        navigation.RegisterRoute("showForm", typeof(ShowFormViewModel));
+        navigation.RegisterRoute("service", typeof(ServiceViewModel));
+        navigation.RegisterRoute("moneyStorage", typeof(MoneyStorageViewModel));
+        navigation.RegisterRoute("cardStorage", typeof(CardStorageViewModel));
+
+        navigation.Navigate("cardEntry");
+
         var mainWindow = new Views.MainWindow();
-        mainWindow.DataContext = appViewModel;
+        mainWindow.DataContext = navigation;
         mainWindow.Show();
         Application.Current.MainWindow = mainWindow;
         Log.Write("MainWindow shown");

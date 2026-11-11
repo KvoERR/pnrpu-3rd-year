@@ -1,11 +1,12 @@
 using System.Windows.Input;
 using KostyaBankApp.Models;
+using KostyaBankApp.Services;
 
 namespace KostyaBankApp.ViewModels;
 
 /// <summary>
 /// ViewModel для ввода карты и PIN-кода.
-/// Зависит от INavigationService (DIP), а не от AppViewModel.
+/// Зависит от INavigationService (DIP).
 /// </summary>
 public class CardEntryViewModel : BaseViewModel
 {
@@ -171,7 +172,7 @@ public class CardEntryViewModel : BaseViewModel
         }
 
         _failedAttempts = 0;
-        _navigation.ShowMainMenu(card);
+        _navigation.Navigate("mainMenu", card);
     }
 
     private void UpdateStatus()

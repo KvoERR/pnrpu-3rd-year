@@ -1,6 +1,6 @@
-using System.Windows;
 using System.Windows.Input;
 using KostyaBankApp.Models;
+using KostyaBankApp.Services;
 
 namespace KostyaBankApp.ViewModels;
 
@@ -20,9 +20,9 @@ public class MainMenuViewModel : BaseViewModel
         _card = card ?? throw new ArgumentNullException(nameof(card));
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
         
-        _showCommand = new SimpleCommand(() => ShowSection("Просмотр операций"));
-        _getCommand = new SimpleCommand(() => ShowSection("Платежи и переводы"));
-        _exitCommand = new SimpleCommand(() => _navigation.ShowCardEntry());
+        _showCommand = new SimpleCommand(() => _navigation.Navigate("showForm", card));
+        _getCommand = new SimpleCommand(() => _navigation.Navigate("getForm", card));
+        _exitCommand = new SimpleCommand(() => _navigation.Navigate("cardEntry"));
     }
 
     public string CardNumber => _card.CardNumber;
@@ -33,15 +33,6 @@ public class MainMenuViewModel : BaseViewModel
     public ICommand ShowCommand => _showCommand;
     public ICommand GetCommand => _getCommand;
     public ICommand ExitCommand => _exitCommand;
-
-    private void ShowSection(string sectionName)
-    {
-        MessageBox.Show(
-            $"{sectionName}\n\nКлиент: {_card.HolderName}\nБаланс: {_card.Balance:C}\n\nЭтот раздел в разработке.",
-            sectionName,
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
-    }
 }
 
 /// <summary>

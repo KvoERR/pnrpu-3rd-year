@@ -2,6 +2,7 @@ using System.Globalization;
 using System.IO;
 using System.Windows.Input;
 using KostyaBankApp.Models;
+using KostyaBankApp.Services;
 
 namespace KostyaBankApp.ViewModels;
 
@@ -15,8 +16,8 @@ public class GetFormViewModel : CardFormViewModel
     private string _withdrawAmount = string.Empty;
     private ICommand _actionCommand;
 
-    public GetFormViewModel(Card card, AppViewModel appViewModel)
-        : base(card, appViewModel)
+    public GetFormViewModel(Card card, INavigationService navigation)
+        : base(card, navigation)
     {
         _printer = new ExcelPrinter();
         _moneyStorage = new MoneyStorageRepository(new MoneyStorageModel());

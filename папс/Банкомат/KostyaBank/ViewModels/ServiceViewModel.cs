@@ -1,5 +1,6 @@
 using System.Windows.Input;
 using KostyaBankApp.Models;
+using KostyaBankApp.Services;
 
 namespace KostyaBankApp.ViewModels;
 
@@ -8,18 +9,18 @@ namespace KostyaBankApp.ViewModels;
 /// </summary>
 public class ServiceViewModel : BaseViewModel
 {
-    private readonly AppViewModel _appViewModel;
+    private readonly INavigationService _navigation;
     private string _statusText = "Сервисные операции";
     private readonly ICommand _backCommand;
     private readonly ICommand _moneyStorageCommand;
     private readonly ICommand _cardStorageCommand;
 
-    public ServiceViewModel(AppViewModel appViewModel)
+    public ServiceViewModel(INavigationService navigation)
     {
-        _appViewModel = appViewModel ?? throw new ArgumentNullException(nameof(appViewModel));
-        _backCommand = new SimpleCommand(() => _appViewModel.Show(CardEntryViewModelFactory.Create(_appViewModel)));
-        _moneyStorageCommand = new SimpleCommand(() => _appViewModel.Show(MoneyStorageViewModelFactory.Create(_appViewModel)));
-        _cardStorageCommand = new SimpleCommand(() => _appViewModel.Show(CardStorageViewModelFactory.Create(_appViewModel)));
+        _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
+        _backCommand = new SimpleCommand(() => _navigation.Navigate("cardEntry"));
+        _moneyStorageCommand = new SimpleCommand(() => _navigation.Navigate("moneyStorage"));
+        _cardStorageCommand = new SimpleCommand(() => _navigation.Navigate("cardStorage"));
     }
 
     public string StatusText

@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Input;
 using KostyaBankApp.Models;
+using KostyaBankApp.Services;
 
 namespace KostyaBankApp.ViewModels;
 
@@ -10,19 +11,19 @@ namespace KostyaBankApp.ViewModels;
 public abstract class CardFormViewModel : BaseViewModel
 {
     protected readonly Card Card;
-    protected readonly AppViewModel AppViewModel;
+    protected readonly INavigationService Navigation;
     private readonly ICommand _backCommand;
     private readonly ICommand _actionCommand;
     private string _messageText = string.Empty;
     private Visibility _messageVisibility = Visibility.Collapsed;
     private bool _printReceipt;
 
-    protected CardFormViewModel(Card card, AppViewModel appViewModel)
+    protected CardFormViewModel(Card card, INavigationService navigation)
     {
         Card = card ?? throw new ArgumentNullException(nameof(card));
-        AppViewModel = appViewModel ?? throw new ArgumentNullException(nameof(appViewModel));
+        Navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
 
-        _backCommand = new SimpleCommand(() => AppViewModel.Show(new CardEntryViewModel { AppViewModel = AppViewModel }));
+        _backCommand = new SimpleCommand(() => Navigation.Navigate("mainMenu"));
         _actionCommand = new SimpleCommand(() =>
         {
             ExecuteAction();

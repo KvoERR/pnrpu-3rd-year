@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
 using KostyaBankApp.Models;
+using KostyaBankApp.Services;
 
 namespace KostyaBankApp.ViewModels;
 
@@ -11,18 +12,18 @@ namespace KostyaBankApp.ViewModels;
 public class CardStorageViewModel : BaseViewModel
 {
     private readonly ICardStorageRepository _cardStorage;
-    private readonly AppViewModel _appViewModel;
+    private readonly INavigationService _navigation;
     private readonly ICommand _backCommand;
     private readonly ICommand _clearCommand;
     private string _statusText = string.Empty;
     private Visibility _statusVisibility = Visibility.Collapsed;
     private string _countText = "0";
 
-    public CardStorageViewModel(AppViewModel appViewModel)
+    public CardStorageViewModel(INavigationService navigation, ICardStorageRepository cardStorage)
     {
-        _appViewModel = appViewModel ?? throw new ArgumentNullException(nameof(appViewModel));
-        _cardStorage = new CardStorageRepository();
-        _backCommand = new SimpleCommand(() => _appViewModel.Show(ServiceViewModelFactory.Create(_appViewModel)));
+        _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
+        _cardStorage = cardStorage ?? throw new ArgumentNullException(nameof(cardStorage));
+        _backCommand = new SimpleCommand(() => _navigation.Navigate("service"));
         _clearCommand = new SimpleCommand(() => ClearStorage(), () => _cardStorage.Count > 0);
 
         foreach (var card in _cardStorage.Cards)

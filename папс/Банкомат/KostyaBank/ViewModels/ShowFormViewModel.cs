@@ -1,5 +1,6 @@
 using System.IO;
 using KostyaBankApp.Models;
+using KostyaBankApp.Services;
 
 namespace KostyaBankApp.ViewModels;
 
@@ -10,8 +11,8 @@ public class ShowFormViewModel : CardFormViewModel
 {
     private readonly IReceiptPrinter _printer;
 
-    public ShowFormViewModel(Card card, AppViewModel appViewModel)
-        : base(card, appViewModel)
+    public ShowFormViewModel(Card card, INavigationService navigation)
+        : base(card, navigation)
     {
         _printer = new ExcelPrinter();
     }

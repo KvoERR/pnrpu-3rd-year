@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using KostyaBankApp.Models;
+using KostyaBankApp.Services;
 
 namespace KostyaBankApp.ViewModels;
 
@@ -12,7 +13,7 @@ namespace KostyaBankApp.ViewModels;
 public class MoneyStorageViewModel : BaseViewModel
 {
     private readonly IMoneyStorageRepository _moneyStorage;
-    private readonly AppViewModel _appViewModel;
+    private readonly INavigationService _navigation;
     private readonly ICommand _backCommand;
     private readonly ICommand _loadAllCommand;
     private readonly ICommand _unloadAllCommand;
@@ -21,12 +22,11 @@ public class MoneyStorageViewModel : BaseViewModel
     private Visibility _statusVisibility = Visibility.Collapsed;
     private string _totalText = "0";
 
-    public MoneyStorageViewModel(AppViewModel appViewModel)
+    public MoneyStorageViewModel(INavigationService navigation, IMoneyStorageRepository moneyStorage)
     {
-        _appViewModel = appViewModel ?? throw new ArgumentNullException(nameof(appViewModel));
-        var model = new MoneyStorageModel();
-        _moneyStorage = new MoneyStorageRepository(model);
-        _backCommand = new SimpleCommand(() => _appViewModel.Show(ServiceViewModelFactory.Create(_appViewModel)));
+        _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
+        _moneyStorage = moneyStorage ?? throw new ArgumentNullException(nameof(moneyStorage));
+        _backCommand = new SimpleCommand(() => _navigation.Navigate("service"));
         _loadAllCommand = new SimpleCommand(() => LoadAllMoney(), () => HasAnyEntries());
         _unloadAllCommand = new SimpleCommand(() => UnloadAllMoney(), () => HasAnyEntries());
         _clearCommand = new SimpleCommand(() => ClearStorage(), () => _moneyStorage.SumMoney() > 0);
