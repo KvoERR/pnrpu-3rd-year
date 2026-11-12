@@ -12,18 +12,18 @@ namespace KostyaBankApp.ViewModels;
 public class CardStorageViewModel : BaseViewModel
 {
     private readonly ICardStorageRepository _cardStorage;
-    private readonly INavigationService _navigation;
+    private readonly INavigator _navigation;
     private readonly ICommand _backCommand;
     private readonly ICommand _clearCommand;
     private string _statusText = string.Empty;
     private Visibility _statusVisibility = Visibility.Collapsed;
     private string _countText = "0";
 
-    public CardStorageViewModel(INavigationService navigation, ICardStorageRepository cardStorage)
+    public CardStorageViewModel(INavigator navigation, ICardStorageRepository cardStorage)
     {
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
         _cardStorage = cardStorage ?? throw new ArgumentNullException(nameof(cardStorage));
-        _backCommand = new SimpleCommand(() => _navigation.Navigate("service"));
+        _backCommand = new SimpleCommand(() => _navigation.Navigate<ServiceViewModel>());
         _clearCommand = new SimpleCommand(() => ClearStorage(), () => _cardStorage.Count > 0);
 
         foreach (var card in _cardStorage.Cards)

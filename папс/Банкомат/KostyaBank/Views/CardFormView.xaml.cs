@@ -25,14 +25,14 @@ public partial class CardFormView : UserControl
         set => SetValue(HeaderTitleProperty, value);
     }
 
-    public static readonly DependencyProperty ContentTemplateProperty =
+    public new static readonly DependencyProperty ContentTemplateProperty =
         DependencyProperty.Register(
             nameof(ContentTemplate),
             typeof(DataTemplate),
             typeof(CardFormView),
             new PropertyMetadata(null));
 
-    public DataTemplate? ContentTemplate
+    public new DataTemplate? ContentTemplate
     {
         get => (DataTemplate?)GetValue(ContentTemplateProperty);
         set => SetValue(ContentTemplateProperty, value);

@@ -7,9 +7,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace KostyaBankApp;
 
-/// <summary>
-/// Simple file logger for debugging
-/// </summary>
 public static class Log
 {
     private static readonly string _path = System.IO.Path.Combine(
@@ -25,9 +22,6 @@ public static class Log
     }
 }
 
-/// <summary>
-/// Interaction logic for App.xaml
-/// </summary>
 public partial class App : Application
 {
     protected override void OnStartup(StartupEventArgs e)
@@ -36,21 +30,24 @@ public partial class App : Application
 
         DispatcherUnhandledException += App_DispatcherUnhandledException;
         AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
-        
+
         base.OnStartup(e);
 
-        // Создаём зависимости (DIP)
-        var cardRepository = new ExcelCardRepository();
-        var cardStorageRepository = new CardStorageRepository();
-        var moneyStorageModel = new MoneyStorageModel();
-        var moneyStorageRepository = new MoneyStorageRepository(moneyStorageModel);
+        // --- Зависимости (DIP) ---
+        var cardRepository         = new ExcelCardRepository();
+        var cardStorageRepository  = new CardStorageRepository();
+        var moneyStorageModel      = new MoneyStorageModel();
+        var nominalProvider        = new DefaultNominalProvider();
+        var moneyStorageRepository = new MoneyStorageRepository(moneyStorageModel, nominalProvider);
 
-        // DI-контейнер: регистрируем сервисы и VMs
+        // --- DI-контейнер ---
         var services = new ServiceCollection();
         services.AddSingleton<ICardRepository>(cardRepository);
         services.AddSingleton<ICardStorageRepository>(cardStorageRepository);
         services.AddSingleton<IMoneyStorageRepository>(moneyStorageRepository);
-        services.AddSingleton<INavigationService, NavigationService>();
+        services.AddSingleton<IReceiptPrinter, ExcelPrinter>();
+        services.AddSingleton<INominalProvider, DefaultNominalProvider>();
+        services.AddSingleton<INavigator, Navigator>();
         services.AddTransient<CardEntryViewModel>();
         services.AddTransient<MainMenuViewModel>();
         services.AddTransient<GetFormViewModel>();
@@ -61,23 +58,17 @@ public partial class App : Application
 
         var serviceProvider = services.BuildServiceProvider();
 
-        // Создаём навигатор (он же DataContext)
-        var navigation = serviceProvider.GetRequiredService<INavigationService>() as NavigationService
-            ?? throw new InvalidOperationException("NavigationService not found");
-        navigation.RegisterRoute("cardEntry", typeof(CardEntryViewModel));
-        navigation.RegisterRoute("mainMenu", typeof(MainMenuViewModel));
-        navigation.RegisterRoute("getForm", typeof(GetFormViewModel));
-        navigation.RegisterRoute("showForm", typeof(ShowFormViewModel));
-        navigation.RegisterRoute("service", typeof(ServiceViewModel));
-        navigation.RegisterRoute("moneyStorage", typeof(MoneyStorageViewModel));
-        navigation.RegisterRoute("cardStorage", typeof(CardStorageViewModel));
-
-        navigation.Navigate("cardEntry");
+        // --- Навигатор как DataContext окна ---
+        var navigator = serviceProvider.GetRequiredService<INavigator>();
 
         var mainWindow = new Views.MainWindow();
-        mainWindow.DataContext = navigation;
+        mainWindow.DataContext = navigator;
         mainWindow.Show();
         Application.Current.MainWindow = mainWindow;
+
+        // --- Стартовый экран: одна строка, без регистрации ---
+        navigator.Navigate<CardEntryViewModel>();
+
         Log.Write("MainWindow shown");
     }
 
@@ -90,8 +81,6 @@ public partial class App : Application
     private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
         if (e.ExceptionObject is Exception ex)
-        {
             Log.Write($"AppDomain Error: {ex.Message}\n{ex.StackTrace}");
-        }
     }
 }

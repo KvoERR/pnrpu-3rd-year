@@ -11,11 +11,13 @@ namespace KostyaBankApp.Models;
 public class MoneyStorageRepository : IMoneyStorageRepository
 {
     private readonly MoneyStorageModel _model;
+    private readonly INominalProvider _nominalProvider;
     private readonly string _filePath;
 
-    public MoneyStorageRepository(MoneyStorageModel model)
+    public MoneyStorageRepository(MoneyStorageModel model, INominalProvider nominalProvider)
     {
         _model = model;
+        _nominalProvider = nominalProvider ?? throw new ArgumentNullException(nameof(nominalProvider));
         _filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "money_storage.xlsx");
         LoadFromExcel();
     }
@@ -79,9 +81,9 @@ public class MoneyStorageRepository : IMoneyStorageRepository
             worksheet.Cells[i, 2].Value = null;
         }
 
-        var allNominals = new[] { 50, 100, 200, 500, 1000, 5000 };
+        var allNominals = _nominalProvider.Nominals;
         var data = _model.GetData();
-        for (int i = 0; i < allNominals.Length; i++)
+        for (int i = 0; i < allNominals.Count; i++)
         {
             var nominal = allNominals[i];
             worksheet.Cells[i + 2, 1].Value = nominal;

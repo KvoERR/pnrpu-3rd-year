@@ -12,7 +12,7 @@ public class CardEntryViewModel : BaseViewModel
 {
     private readonly ICardRepository _cardRepository;
     private readonly ICardStorageRepository _cardStorageRepository;
-    private readonly INavigationService _navigation;
+    private readonly INavigator _navigation;
     private string _cardNumber = string.Empty;
     private string _pinCode = string.Empty;
     private string _statusText = string.Empty;
@@ -23,7 +23,7 @@ public class CardEntryViewModel : BaseViewModel
     private const int MaxAttempts = 3;
     private ICommand _loginCommand;
 
-    public CardEntryViewModel(ICardRepository cardRepository, ICardStorageRepository cardStorageRepository, INavigationService navigation)
+    public CardEntryViewModel(ICardRepository cardRepository, ICardStorageRepository cardStorageRepository, INavigator navigation)
     {
         _cardRepository = cardRepository ?? throw new ArgumentNullException(nameof(cardRepository));
         _cardStorageRepository = cardStorageRepository ?? throw new ArgumentNullException(nameof(cardStorageRepository));
@@ -172,7 +172,7 @@ public class CardEntryViewModel : BaseViewModel
         }
 
         _failedAttempts = 0;
-        _navigation.Navigate("mainMenu", card);
+        _navigation.Navigate<MainMenuViewModel>(card);
     }
 
     private void UpdateStatus()

@@ -16,11 +16,11 @@ public class GetFormViewModel : CardFormViewModel
     private string _withdrawAmount = string.Empty;
     private ICommand _actionCommand;
 
-    public GetFormViewModel(Card card, INavigationService navigation)
+    public GetFormViewModel(Card card, INavigator navigation, IReceiptPrinter printer, IMoneyStorageRepository moneyStorage)
         : base(card, navigation)
     {
-        _printer = new ExcelPrinter();
-        _moneyStorage = new MoneyStorageRepository(new MoneyStorageModel());
+        _printer = printer ?? throw new ArgumentNullException(nameof(printer));
+        _moneyStorage = moneyStorage ?? throw new ArgumentNullException(nameof(moneyStorage));
         _actionCommand = base.ActionCommand;
     }
 

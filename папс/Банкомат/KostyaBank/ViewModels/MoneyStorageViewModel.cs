@@ -13,7 +13,7 @@ namespace KostyaBankApp.ViewModels;
 public class MoneyStorageViewModel : BaseViewModel
 {
     private readonly IMoneyStorageRepository _moneyStorage;
-    private readonly INavigationService _navigation;
+    private readonly INavigator _navigation;
     private readonly ICommand _backCommand;
     private readonly ICommand _loadAllCommand;
     private readonly ICommand _unloadAllCommand;
@@ -22,24 +22,17 @@ public class MoneyStorageViewModel : BaseViewModel
     private Visibility _statusVisibility = Visibility.Collapsed;
     private string _totalText = "0";
 
-    public MoneyStorageViewModel(INavigationService navigation, IMoneyStorageRepository moneyStorage)
+    public MoneyStorageViewModel(INavigator navigation, IMoneyStorageRepository moneyStorage, INominalProvider nominalProvider)
     {
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
         _moneyStorage = moneyStorage ?? throw new ArgumentNullException(nameof(moneyStorage));
-        _backCommand = new SimpleCommand(() => _navigation.Navigate("service"));
+        _backCommand = new SimpleCommand(() => _navigation.Navigate<ServiceViewModel>());
         _loadAllCommand = new SimpleCommand(() => LoadAllMoney(), () => HasAnyEntries());
         _unloadAllCommand = new SimpleCommand(() => UnloadAllMoney(), () => HasAnyEntries());
         _clearCommand = new SimpleCommand(() => ClearStorage(), () => _moneyStorage.SumMoney() > 0);
 
-        MoneyEntries = new ObservableCollection<Money>
-        {
-            new Money { Amount = 50 },
-            new Money { Amount = 100 },
-            new Money { Amount = 200 },
-            new Money { Amount = 500 },
-            new Money { Amount = 1000 },
-            new Money { Amount = 5000 }
-        };
+        MoneyEntries = new ObservableCollection<Money>(
+            nominalProvider.Nominals.Select(n => new Money { Amount = n }));
 
         foreach (var money in MoneyEntries)
             money.PropertyChanged += OnMoneyEntryChanged;
@@ -59,7 +52,7 @@ public class MoneyStorageViewModel : BaseViewModel
     public ICommand UnloadAllCommand => _unloadAllCommand;
     public ICommand ClearCommand => _clearCommand;
 
-    private void OnMoneyEntryChanged(object sender, PropertyChangedEventArgs e)
+    private void OnMoneyEntryChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(Money.Count))
         {

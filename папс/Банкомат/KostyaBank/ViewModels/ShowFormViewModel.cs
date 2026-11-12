@@ -11,10 +11,10 @@ public class ShowFormViewModel : CardFormViewModel
 {
     private readonly IReceiptPrinter _printer;
 
-    public ShowFormViewModel(Card card, INavigationService navigation)
+    public ShowFormViewModel(Card card, INavigator navigation, IReceiptPrinter printer)
         : base(card, navigation)
     {
-        _printer = new ExcelPrinter();
+        _printer = printer ?? throw new ArgumentNullException(nameof(printer));
     }
 
     public override string ActionButtonText => "Обновить баланс";

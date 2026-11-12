@@ -9,18 +9,18 @@ namespace KostyaBankApp.ViewModels;
 /// </summary>
 public class ServiceViewModel : BaseViewModel
 {
-    private readonly INavigationService _navigation;
+    private readonly INavigator _navigation;
     private string _statusText = "Сервисные операции";
     private readonly ICommand _backCommand;
     private readonly ICommand _moneyStorageCommand;
     private readonly ICommand _cardStorageCommand;
 
-    public ServiceViewModel(INavigationService navigation)
+    public ServiceViewModel(INavigator navigation)
     {
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
-        _backCommand = new SimpleCommand(() => _navigation.Navigate("cardEntry"));
-        _moneyStorageCommand = new SimpleCommand(() => _navigation.Navigate("moneyStorage"));
-        _cardStorageCommand = new SimpleCommand(() => _navigation.Navigate("cardStorage"));
+        _backCommand = new SimpleCommand(() => _navigation.Navigate<CardEntryViewModel>());
+        _moneyStorageCommand = new SimpleCommand(() => _navigation.Navigate<MoneyStorageViewModel>());
+        _cardStorageCommand = new SimpleCommand(() => _navigation.Navigate<CardStorageViewModel>());
     }
 
     public string StatusText

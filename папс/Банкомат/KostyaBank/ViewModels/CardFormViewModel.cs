@@ -11,19 +11,19 @@ namespace KostyaBankApp.ViewModels;
 public abstract class CardFormViewModel : BaseViewModel
 {
     protected readonly Card Card;
-    protected readonly INavigationService Navigation;
+    protected readonly INavigator Navigation;
     private readonly ICommand _backCommand;
     private readonly ICommand _actionCommand;
     private string _messageText = string.Empty;
     private Visibility _messageVisibility = Visibility.Collapsed;
     private bool _printReceipt;
 
-    protected CardFormViewModel(Card card, INavigationService navigation)
+    protected CardFormViewModel(Card card, INavigator navigation)
     {
         Card = card ?? throw new ArgumentNullException(nameof(card));
         Navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
 
-        _backCommand = new SimpleCommand(() => Navigation.Navigate("mainMenu"));
+        _backCommand = new SimpleCommand(() => Navigation.Navigate<MainMenuViewModel>(Card));
         _actionCommand = new SimpleCommand(() =>
         {
             ExecuteAction();

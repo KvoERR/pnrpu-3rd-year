@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:KostyaBankApp.ViewModels"
-        xmlns:views="clr-namespace:KostyaBankApp.Views"
+        xmlns:vw="clr-namespace:KostyaBankApp.Views"
         Title="KostyaBank"
         Height="600" Width="500"
         WindowStartupLocation="CenterScreen"
@@ -10,25 +10,25 @@
 
     <Window.Resources>
         <DataTemplate DataType="{x:Type vm:CardEntryViewModel}">
-            <views:CardEntryView />
+            <vw:CardEntryView />
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:MainMenuViewModel}">
-            <views:MainWindowView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:ServiceViewModel}">
-            <views:ServiceView />
-        </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:ShowFormViewModel}">
-            <views:ShowFormView />
+            <vw:MainWindowView />
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:GetFormViewModel}">
-            <views:GetFormView />
+            <vw:GetFormView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:ShowFormViewModel}">
+            <vw:ShowFormView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:ServiceViewModel}">
+            <vw:ServiceView />
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:MoneyStorageViewModel}">
-            <views:MoneyStorageView />
+            <vw:MoneyStorageView />
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:CardStorageViewModel}">
-            <views:CardStorageView />
+            <vw:CardStorageView />
         </DataTemplate>
     </Window.Resources>
 
@@ -50,7 +50,7 @@
             </StackPanel>
         </Border>
 
-        <!-- Контент меняется здесь -->
-        <ContentControl Grid.Row="1" Content="{Binding CurrentView}"/>
+        <!-- Контент меняется здесь — WPF автоматически мапит VM → View по DataType -->
+        <ContentControl Grid.Row="1" Content="{Binding CurrentView}" />
     </Grid>
 </Window>
