@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using OfficeOpenXml;
 
@@ -7,16 +5,14 @@ namespace KostyaBankApp.Models;
 
 /// <summary>
 /// Репозиторий для поиска карт в основной базе (Excel).
-/// Заменяет класс Computer.
 /// </summary>
 public class ExcelCardRepository : ICardRepository
 {
     private readonly string _filePath;
 
-    public ExcelCardRepository()
+    public ExcelCardRepository(string filePath)
     {
-        var exeDir = AppDomain.CurrentDomain.BaseDirectory;
-        _filePath = Path.Combine(exeDir, "comp.xlsx");
+        _filePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
     }
 
     public Card? GetCardByNumber(string cardNumber)
@@ -29,12 +25,12 @@ public class ExcelCardRepository : ICardRepository
     {
         var cards = new List<Card>();
 
-        if (!File.Exists(_filePath))
+        if (!System.IO.File.Exists(_filePath))
             return cards;
 
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-        using var package = new ExcelPackage(new FileInfo(_filePath));
+        using var package = new ExcelPackage(new System.IO.FileInfo(_filePath));
         var worksheet = package.Workbook.Worksheets[0];
 
         if (worksheet == null) return cards;
@@ -42,18 +38,18 @@ public class ExcelCardRepository : ICardRepository
         int row = 2;
         while (true)
         {
-            var cardNumber = worksheet.Cells[row, 1].Value?.ToString() ?? string.Empty;
+            var cardNumber = ExcelHelper.GetCellString(worksheet, row, 1);
             if (string.IsNullOrEmpty(cardNumber)) break;
 
-            var holderName = worksheet.Cells[row, 2].Value?.ToString() ?? string.Empty;
-            var balanceStr = worksheet.Cells[row, 3].Value?.ToString();
-            var pinCode = worksheet.Cells[row, 4].Value?.ToString() ?? string.Empty;
+            var holderName = ExcelHelper.GetCellString(worksheet, row, 2) ?? string.Empty;
+            var balance = ExcelHelper.GetCellDecimal(worksheet, row, 3);
+            var pinCode = ExcelHelper.GetCellString(worksheet, row, 4) ?? string.Empty;
 
             cards.Add(new Card
             {
                 CardNumber = cardNumber,
                 HolderName = holderName,
-                Balance = decimal.TryParse(balanceStr, out var bal) ? bal : 0,
+                Balance = balance,
                 PinCode = pinCode
             });
 

@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using OfficeOpenXml;
 
@@ -14,11 +12,11 @@ public class MoneyStorageRepository : IMoneyStorageRepository
     private readonly INominalProvider _nominalProvider;
     private readonly string _filePath;
 
-    public MoneyStorageRepository(MoneyStorageModel model, INominalProvider nominalProvider)
+    public MoneyStorageRepository(MoneyStorageModel model, INominalProvider nominalProvider, string filePath)
     {
-        _model = model;
+        _model = model ?? throw new ArgumentNullException(nameof(model));
         _nominalProvider = nominalProvider ?? throw new ArgumentNullException(nameof(nominalProvider));
-        _filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "money_storage.xlsx");
+        _filePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
         LoadFromExcel();
     }
 
@@ -41,12 +39,12 @@ public class MoneyStorageRepository : IMoneyStorageRepository
 
     private void LoadFromExcel()
     {
-        if (!File.Exists(_filePath))
+        if (!System.IO.File.Exists(_filePath))
             return;
 
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-        using var package = new ExcelPackage(new FileInfo(_filePath));
+        using var package = new ExcelPackage(new System.IO.FileInfo(_filePath));
         var worksheet = package.Workbook.Worksheets[0];
 
         if (worksheet == null) return;
@@ -55,10 +53,10 @@ public class MoneyStorageRepository : IMoneyStorageRepository
         int row = 2;
         while (true)
         {
-            var nominalStr = worksheet.Cells[row, 1].Value?.ToString();
+            var nominalStr = ExcelHelper.GetCellString(worksheet, row, 1);
             if (string.IsNullOrEmpty(nominalStr)) break;
 
-            var countStr = worksheet.Cells[row, 2].Value?.ToString();
+            var countStr = ExcelHelper.GetCellString(worksheet, row, 2);
 
             if (int.TryParse(nominalStr, out var nominal) && int.TryParse(countStr, out var count))
             {
@@ -76,14 +74,14 @@ public class MoneyStorageRepository : IMoneyStorageRepository
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-        using var package = new ExcelPackage(new FileInfo(_filePath));
+        using var package = new ExcelPackage(new System.IO.FileInfo(_filePath));
         var worksheet = package.Workbook.Worksheets[0];
 
         int maxRows = Math.Max(_model.GetData().Count + 1, 7);
         for (int i = 2; i <= maxRows; i++)
         {
-            worksheet.Cells[i, 1].Value = null;
-            worksheet.Cells[i, 2].Value = null;
+            worksheet.ClearCell(i, 1);
+            worksheet.ClearCell(i, 2);
         }
 
         var allNominals = _nominalProvider.Nominals;
@@ -91,8 +89,8 @@ public class MoneyStorageRepository : IMoneyStorageRepository
         for (int i = 0; i < allNominals.Count; i++)
         {
             var nominal = allNominals[i];
-            worksheet.Cells[i + 2, 1].Value = nominal;
-            worksheet.Cells[i + 2, 2].Value = data.TryGetValue(nominal, out var count) ? count : 0;
+            worksheet.SetCell(i + 2, 1, nominal);
+            worksheet.SetCell(i + 2, 2, data.TryGetValue(nominal, out var count) ? count : 0);
         }
 
         package.Save();

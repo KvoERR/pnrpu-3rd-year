@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using OfficeOpenXml;
 
@@ -13,10 +11,10 @@ public class CardStorageRepository : ICardStorageRepository
     private readonly List<Card> _cards;
     private readonly string _filePath;
 
-    public CardStorageRepository()
+    public CardStorageRepository(string filePath)
     {
+        _filePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
         _cards = new List<Card>();
-        _filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "card_storage.xlsx");
         LoadFromExcel();
     }
 
@@ -30,7 +28,10 @@ public class CardStorageRepository : ICardStorageRepository
 
     public bool AddCard(Card card)
     {
-        if (card == null || !card.IsValid)
+        if (card == null)
+            return false;
+
+        if (string.IsNullOrWhiteSpace(card.CardNumber))
             return false;
 
         if (_cards.Any(c => c.CardNumber == card.CardNumber))
@@ -57,12 +58,12 @@ public class CardStorageRepository : ICardStorageRepository
 
     private void LoadFromExcel()
     {
-        if (!File.Exists(_filePath))
+        if (!System.IO.File.Exists(_filePath))
             return;
 
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-        using var package = new ExcelPackage(new FileInfo(_filePath));
+        using var package = new ExcelPackage(new System.IO.FileInfo(_filePath));
         var worksheet = package.Workbook.Worksheets[0];
 
         if (worksheet == null) return;
@@ -70,18 +71,18 @@ public class CardStorageRepository : ICardStorageRepository
         int row = 2;
         while (true)
         {
-            var cardNumber = worksheet.Cells[row, 1].Value?.ToString() ?? string.Empty;
+            var cardNumber = ExcelHelper.GetCellString(worksheet, row, 1);
             if (string.IsNullOrEmpty(cardNumber)) break;
 
-            var holderName = worksheet.Cells[row, 2].Value?.ToString() ?? string.Empty;
-            var balanceStr = worksheet.Cells[row, 3].Value?.ToString();
-            var pinCode = worksheet.Cells[row, 4].Value?.ToString() ?? string.Empty;
+            var holderName = ExcelHelper.GetCellString(worksheet, row, 2) ?? string.Empty;
+            var balance = ExcelHelper.GetCellDecimal(worksheet, row, 3);
+            var pinCode = ExcelHelper.GetCellString(worksheet, row, 4) ?? string.Empty;
 
             _cards.Add(new Card
             {
                 CardNumber = cardNumber,
                 HolderName = holderName,
-                Balance = decimal.TryParse(balanceStr, out var bal) ? bal : 0,
+                Balance = balance,
                 PinCode = pinCode
             });
 
@@ -93,25 +94,25 @@ public class CardStorageRepository : ICardStorageRepository
     {
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-        using var package = new ExcelPackage(new FileInfo(_filePath));
+        using var package = new ExcelPackage(new System.IO.FileInfo(_filePath));
         var worksheet = package.Workbook.Worksheets[0];
 
         int maxRows = Math.Max(_cards.Count + 1, 2);
         for (int i = 2; i <= maxRows; i++)
         {
-            worksheet.Cells[i, 1].Value = null;
-            worksheet.Cells[i, 2].Value = null;
-            worksheet.Cells[i, 3].Value = null;
-            worksheet.Cells[i, 4].Value = null;
+            worksheet.ClearCell(i, 1);
+            worksheet.ClearCell(i, 2);
+            worksheet.ClearCell(i, 3);
+            worksheet.ClearCell(i, 4);
         }
 
         for (int i = 0; i < _cards.Count; i++)
         {
             var card = _cards[i];
-            worksheet.Cells[i + 1, 1].Value = card.CardNumber;
-            worksheet.Cells[i + 1, 2].Value = card.HolderName;
-            worksheet.Cells[i + 1, 3].Value = card.Balance;
-            worksheet.Cells[i + 1, 4].Value = card.PinCode;
+            worksheet.SetCell(i + 1, 1, card.CardNumber);
+            worksheet.SetCell(i + 1, 2, card.HolderName);
+            worksheet.SetCell(i + 1, 3, card.Balance);
+            worksheet.SetCell(i + 1, 4, card.PinCode);
         }
 
         package.Save();

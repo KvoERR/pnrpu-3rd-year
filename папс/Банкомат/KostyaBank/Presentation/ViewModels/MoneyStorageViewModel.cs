@@ -36,7 +36,7 @@ public class MoneyStorageViewModel : BaseViewModel
         _clearCommand = new SimpleCommand(() => ClearStorage(), () => _moneyReader.SumMoney() > 0);
 
         MoneyEntries = new ObservableCollection<Money>(
-            nominalProvider.Nominals.Select(n => new Money { Amount = n }));
+            nominalProvider.Nominals.Select(n => new Money(nominalProvider) { Amount = n }));
 
         foreach (var money in MoneyEntries)
             money.PropertyChanged += OnMoneyEntryChanged;

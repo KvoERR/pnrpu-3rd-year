@@ -33,12 +33,17 @@ public partial class App : Application
 
         base.OnStartup(e);
 
+        var baseDir = AppContext.BaseDirectory;
+
         // --- Зависимости (DIP) ---
-        var cardRepository         = new ExcelCardRepository();
-        var cardStorageRepository  = new CardStorageRepository();
+        var cardRepository         = new ExcelCardRepository(Path.Combine(baseDir, "comp.xlsx"));
+        var cardStorageRepository  = new CardStorageRepository(Path.Combine(baseDir, "card_storage.xlsx"));
         var moneyStorageModel      = new MoneyStorageModel();
         var nominalProvider        = new DefaultNominalProvider();
-        var moneyStorageRepository = new MoneyStorageRepository(moneyStorageModel, nominalProvider);
+        var moneyStorageRepository = new MoneyStorageRepository(moneyStorageModel, nominalProvider, Path.Combine(baseDir, "money_storage.xlsx"));
+        var cardValidator          = new CardValidator();
+        var outputDir              = Path.Combine(baseDir, "Output");
+        var excelPrinter           = new ExcelPrinter(outputDir);
 
         // --- DI-контейнер ---
         var services = new ServiceCollection();
@@ -50,8 +55,9 @@ public partial class App : Application
         services.AddSingleton<IMoneyStorageReader>(moneyStorageRepository);
         services.AddSingleton<IMoneyStorageWriter>(moneyStorageRepository);
         services.AddSingleton<IMoneyStorageReloader>(moneyStorageRepository);
-        services.AddSingleton<IReceiptPrinter, ExcelPrinter>();
+        services.AddSingleton<IReceiptPrinter>(excelPrinter);
         services.AddSingleton<INominalProvider, DefaultNominalProvider>();
+        services.AddSingleton<ICardValidator, CardValidator>();
         services.AddSingleton<ICardAuthService, CardAuthService>();
         services.AddSingleton<IViewModelFactory, ViewModelFactory>();
         services.AddSingleton<INavigator, Navigator>();

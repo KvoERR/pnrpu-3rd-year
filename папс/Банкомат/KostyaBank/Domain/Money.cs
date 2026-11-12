@@ -9,17 +9,22 @@ namespace KostyaBankApp.Models;
 /// </summary>
 public class Money : INotifyPropertyChanged
 {
+    private readonly INominalProvider _nominalProvider;
     private int _amount;
     private int _count;
-    public List<int> PossibleAmounts = new() { 50, 100, 200, 500, 1000, 5000 };
+
+    public Money(INominalProvider nominalProvider)
+    {
+        _nominalProvider = nominalProvider ?? throw new ArgumentNullException(nameof(nominalProvider));
+    }
 
     public int Amount
     {
         get => _amount;
         set
         {
-            if (!PossibleAmounts.Contains(value))
-                throw new ArgumentException($"Недопустимый номинал: {value}. Допустимые: {string.Join(", ", PossibleAmounts)}");
+            if (!_nominalProvider.Nominals.Contains(value))
+                throw new ArgumentException($"Недопустимый номинал: {value}. Допустимые: {string.Join(", ", _nominalProvider.Nominals)}");
             _amount = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(Subtotal));

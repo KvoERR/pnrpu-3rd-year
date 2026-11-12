@@ -22,9 +22,9 @@ public class AuthResult
         CardWasBlocked = cardWasBlocked;
     }
 
-    public static AuthResult Ok(Card card) => new(true, card, statusText: "✓ Готово");
+    public static AuthResult Ok(Card card) => new(true, card, statusText: "Готово");
     public static AuthResult Error(string error, string? statusText = null) => new(false, null, error, statusText ?? error);
-    public static AuthResult CardBlocked() => new(false, null, "Карта заблокирована", "🔒 Карта заблокирована", true);
+    public static AuthResult CardBlocked() => new(false, null, "Карта заблокирована", "Карта заблокирована", true);
 }
 
 /// <summary>
@@ -45,12 +45,14 @@ public class CardAuthService : ICardAuthService
     private const int MaxAttempts = 3;
     private readonly ICardRepository _cardRepository;
     private readonly ICardStorageRepository _cardStorage;
+    private readonly ICardValidator _cardValidator;
     private readonly Dictionary<string, int> _failedAttempts;
 
-    public CardAuthService(ICardRepository cardRepository, ICardStorageRepository cardStorage)
+    public CardAuthService(ICardRepository cardRepository, ICardStorageRepository cardStorage, ICardValidator cardValidator)
     {
         _cardRepository = cardRepository ?? throw new ArgumentNullException(nameof(cardRepository));
         _cardStorage = cardStorage ?? throw new ArgumentNullException(nameof(cardStorage));
+        _cardValidator = cardValidator ?? throw new ArgumentNullException(nameof(cardValidator));
         _failedAttempts = new Dictionary<string, int>();
     }
 
@@ -62,11 +64,13 @@ public class CardAuthService : ICardAuthService
     public AuthResult Authenticate(string cardNumber, string pinCode)
     {
         // Валидация формата
-        if (string.IsNullOrEmpty(cardNumber) || cardNumber.Length != 16 || !cardNumber.All(char.IsDigit))
-            return AuthResult.Error("Номер карты должен содержать 16 цифр", "✗ Неверный формат карты");
+        var cardValidation = _cardValidator.ValidateCardNumber(cardNumber);
+        if (!cardValidation.IsValid)
+            return AuthResult.Error(cardValidation.ErrorMessage!, "Неверный формат карты");
 
-        if (string.IsNullOrEmpty(pinCode) || pinCode.Length != 4 || !pinCode.All(char.IsDigit))
-            return AuthResult.Error("PIN-код должен содержать 4 цифры", "✗ Неверный формат PIN");
+        var pinValidation = _cardValidator.ValidatePin(pinCode);
+        if (!pinValidation.IsValid)
+            return AuthResult.Error(pinValidation.ErrorMessage!, "Неверный формат PIN");
 
         // Проверка блокировки
         if (IsCardBlocked(cardNumber))
@@ -75,7 +79,7 @@ public class CardAuthService : ICardAuthService
         // Поиск карты
         var card = _cardRepository.GetCardByNumber(cardNumber);
         if (card == null)
-            return AuthResult.Error("Карта не найдена в базе", "✗ Не найдена");
+            return AuthResult.Error("Карта не найдена в базе", "Не найдена");
 
         // Проверка PIN
         if (card.PinCode != pinCode)
@@ -92,13 +96,13 @@ public class CardAuthService : ICardAuthService
                 _failedAttempts.Remove(cardNumber);
                 return AuthResult.Error(
                     $"Карта заблокирована после {MaxAttempts} неверных попыток. Карта помещена в хранилище.",
-                    "🔒 Карта заблокирована");
+                    "Карта заблокирована");
             }
             else
             {
                 return AuthResult.Error(
                     $"Неверный PIN-код. Осталось попыток: {remaining}",
-                    "✗ Неверный PIN");
+                    "Неверный PIN");
             }
         }
 

@@ -11,7 +11,12 @@ namespace KostyaBankApp.Models;
 /// </summary>
 public class ExcelPrinter : IReceiptPrinter
 {
-    private readonly string _outputPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Output");
+    private readonly string _outputPath;
+
+    public ExcelPrinter(string outputPath)
+    {
+        _outputPath = outputPath ?? throw new ArgumentNullException(nameof(outputPath));
+    }
 
     public string SaveWithdrawDoc(decimal amount, Card card, DateTime transactionDate)
     {
