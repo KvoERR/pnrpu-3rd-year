@@ -12,7 +12,9 @@ namespace KostyaBankApp.ViewModels;
 /// </summary>
 public class MoneyStorageViewModel : BaseViewModel
 {
-    private readonly IMoneyStorageRepository _moneyStorage;
+    private readonly IMoneyStorageReader _moneyReader;
+    private readonly IMoneyStorageWriter _moneyWriter;
+    private readonly IMoneyStorageReloader _moneyReloader;
     private readonly INavigator _navigation;
     private readonly ICommand _backCommand;
     private readonly ICommand _loadAllCommand;
@@ -22,14 +24,16 @@ public class MoneyStorageViewModel : BaseViewModel
     private Visibility _statusVisibility = Visibility.Collapsed;
     private string _totalText = "0";
 
-    public MoneyStorageViewModel(INavigator navigation, IMoneyStorageRepository moneyStorage, INominalProvider nominalProvider)
+    public MoneyStorageViewModel(INavigator navigation, IMoneyStorageReader moneyReader, IMoneyStorageWriter moneyWriter, IMoneyStorageReloader moneyReloader, INominalProvider nominalProvider)
     {
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
-        _moneyStorage = moneyStorage ?? throw new ArgumentNullException(nameof(moneyStorage));
+        _moneyReader = moneyReader ?? throw new ArgumentNullException(nameof(moneyReader));
+        _moneyWriter = moneyWriter ?? throw new ArgumentNullException(nameof(moneyWriter));
+        _moneyReloader = moneyReloader ?? throw new ArgumentNullException(nameof(moneyReloader));
         _backCommand = new SimpleCommand(() => _navigation.Navigate<ServiceViewModel>());
         _loadAllCommand = new SimpleCommand(() => LoadAllMoney(), () => HasAnyEntries());
         _unloadAllCommand = new SimpleCommand(() => UnloadAllMoney(), () => HasAnyEntries());
-        _clearCommand = new SimpleCommand(() => ClearStorage(), () => _moneyStorage.SumMoney() > 0);
+        _clearCommand = new SimpleCommand(() => ClearStorage(), () => _moneyReader.SumMoney() > 0);
 
         MoneyEntries = new ObservableCollection<Money>(
             nominalProvider.Nominals.Select(n => new Money { Amount = n }));
@@ -70,12 +74,12 @@ public class MoneyStorageViewModel : BaseViewModel
         {
             if (money.Count > 0)
             {
-                _moneyStorage.AddMoney(money.Amount, money.Count);
+                _moneyWriter.AddMoney(money.Amount, money.Count);
                 details.Add($"{money.Count} × {money.Amount} руб.");
                 money.Count = 0;
             }
         }
-        ReloadFromExcel();
+        _moneyReloader.Reload();
         StatusText = $"Загружено: {string.Join(", ", details)}";
         StatusVisibility = Visibility.Visible;
     }
@@ -87,17 +91,17 @@ public class MoneyStorageViewModel : BaseViewModel
         {
             if (money.Count > 0)
             {
-                int available = _moneyStorage.GetCountByNominal(money.Amount);
+                int available = _moneyReader.GetCountByNominal(money.Amount);
                 int toUnload = Math.Min(money.Count, available);
                 if (toUnload == 0) continue;
-                _moneyStorage.RemoveMoney(money.Amount, toUnload);
+                _moneyWriter.RemoveMoney(money.Amount, toUnload);
                 details.Add($"{toUnload} × {money.Amount} руб.");
                 money.Count -= toUnload;
             }
         }
         if (details.Count > 0)
         {
-            ReloadFromExcel();
+            _moneyReloader.Reload();
             StatusText = $"Выгружено: {string.Join(", ", details)}";
             StatusVisibility = Visibility.Visible;
         }
@@ -105,20 +109,20 @@ public class MoneyStorageViewModel : BaseViewModel
 
     private void ClearStorage()
     {
-        int total = _moneyStorage.ClearStorage();
-        ReloadFromExcel();
+        int total = _moneyWriter.ClearStorage();
+        _moneyReloader.Reload();
         StatusText = $"Хранилище очищено. Выгружено {total} руб.";
         StatusVisibility = Visibility.Visible;
     }
 
-    private void UpdateTotal() => TotalText = _moneyStorage.SumMoney().ToString();
+    private void UpdateTotal() => TotalText = _moneyReader.SumMoney().ToString();
 
     private void ReloadFromExcel()
     {
-        _moneyStorage.ReloadFromExcel();
+        _moneyReloader.Reload();
         foreach (var money in MoneyEntries)
         {
-            money.Count = _moneyStorage.GetCountByNominal(money.Amount);
+            money.Count = _moneyReader.GetCountByNominal(money.Amount);
         }
         UpdateTotal();
     }

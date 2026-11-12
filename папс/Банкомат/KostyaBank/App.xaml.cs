@@ -44,9 +44,16 @@ public partial class App : Application
         var services = new ServiceCollection();
         services.AddSingleton<ICardRepository>(cardRepository);
         services.AddSingleton<ICardStorageRepository>(cardStorageRepository);
+        services.AddSingleton<ICardStorageReader>(cardStorageRepository);
+        services.AddSingleton<ICardStorageWriter>(cardStorageRepository);
         services.AddSingleton<IMoneyStorageRepository>(moneyStorageRepository);
+        services.AddSingleton<IMoneyStorageReader>(moneyStorageRepository);
+        services.AddSingleton<IMoneyStorageWriter>(moneyStorageRepository);
+        services.AddSingleton<IMoneyStorageReloader>(moneyStorageRepository);
         services.AddSingleton<IReceiptPrinter, ExcelPrinter>();
         services.AddSingleton<INominalProvider, DefaultNominalProvider>();
+        services.AddSingleton<ICardAuthService, CardAuthService>();
+        services.AddSingleton<IViewModelFactory, ViewModelFactory>();
         services.AddSingleton<INavigator, Navigator>();
         services.AddTransient<CardEntryViewModel>();
         services.AddTransient<MainMenuViewModel>();

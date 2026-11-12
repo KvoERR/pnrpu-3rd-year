@@ -6,12 +6,11 @@ namespace KostyaBankApp.ViewModels;
 
 /// <summary>
 /// ViewModel для ввода карты и PIN-кода.
-/// Зависит от INavigationService (DIP).
+/// Зависит от ICardAuthService (SRP).
 /// </summary>
 public class CardEntryViewModel : BaseViewModel
 {
-    private readonly ICardRepository _cardRepository;
-    private readonly ICardStorageRepository _cardStorageRepository;
+    private readonly ICardAuthService _cardAuthService;
     private readonly INavigator _navigation;
     private string _cardNumber = string.Empty;
     private string _pinCode = string.Empty;
@@ -19,14 +18,11 @@ public class CardEntryViewModel : BaseViewModel
     private bool _canLogin;
     private string _errorText = string.Empty;
     private bool _showError;
-    private int _failedAttempts;
-    private const int MaxAttempts = 3;
     private ICommand _loginCommand;
 
-    public CardEntryViewModel(ICardRepository cardRepository, ICardStorageRepository cardStorageRepository, INavigator navigation)
+    public CardEntryViewModel(ICardAuthService cardAuthService, INavigator navigation)
     {
-        _cardRepository = cardRepository ?? throw new ArgumentNullException(nameof(cardRepository));
-        _cardStorageRepository = cardStorageRepository ?? throw new ArgumentNullException(nameof(cardStorageRepository));
+        _cardAuthService = cardAuthService ?? throw new ArgumentNullException(nameof(cardAuthService));
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
         _loginCommand = new SimpleCommand(ExecuteLogin, () => _canLogin);
         UpdateStatus();
@@ -38,20 +34,19 @@ public class CardEntryViewModel : BaseViewModel
         set
         {
             if (_cardNumber == value) return;
-            
+
             if (!string.IsNullOrEmpty(value) && (string.IsNullOrEmpty(_cardNumber) || _cardNumber.Length != value.Length || _cardNumber != value))
             {
                 ShowError = false;
                 ErrorText = string.Empty;
             }
-            
+
             _cardNumber = value;
             OnPropertyChanged();
 
             if (!string.IsNullOrEmpty(value) && value.Length == 16)
             {
-                var blockedCard = _cardStorageRepository.GetCardByNumber(value);
-                if (blockedCard != null)
+                if (_cardAuthService.IsCardBlocked(value))
                 {
                     ShowError = true;
                     CanLogin = false;
@@ -110,69 +105,17 @@ public class CardEntryViewModel : BaseViewModel
 
     private void ExecuteLogin()
     {
-        if (CardNumber.Length == 16 && _cardStorageRepository.GetCardByNumber(CardNumber) != null)
+        var result = _cardAuthService.Authenticate(CardNumber, PinCode);
+
+        ErrorText = result.ErrorMessage ?? string.Empty;
+        StatusText = result.StatusText ?? string.Empty;
+        ShowError = !result.Success;
+        CanLogin = result.Success;
+
+        if (result.Success && result.Card != null)
         {
-            ShowError = true;
-            ErrorText = "Карта заблокирована и помещена в хранилище";
-            StatusText = "🔒 Карта заблокирована";
-            return;
+            _navigation.Navigate<MainMenuViewModel>(result.Card);
         }
-
-        if (CardNumber.Length != 16 || !CardNumber.All(char.IsDigit))
-        {
-            ShowError = true;
-            CanLogin = false;
-            ErrorText = "Номер карты должен содержать 16 цифр";
-            StatusText = "✗ Неверный формат карты";
-            return;
-        }
-
-        if (string.IsNullOrEmpty(PinCode) || PinCode.Length != 4 || !PinCode.All(char.IsDigit))
-        {
-            ShowError = true;
-            CanLogin = false;
-            ErrorText = "PIN-код должен содержать 4 цифры";
-            StatusText = "✗ Неверный формат PIN";
-            return;
-        }
-
-        var card = _cardRepository.GetCardByNumber(CardNumber);
-
-        if (card == null)
-        {
-            ShowError = true;
-            CanLogin = false;
-            ErrorText = "Карта не найдена в базе";
-            StatusText = "✗ Не найдена";
-            return;
-        }
-
-        if (card.PinCode != PinCode)
-        {
-            _failedAttempts++;
-            int remaining = MaxAttempts - _failedAttempts;
-
-            if (_failedAttempts >= MaxAttempts)
-            {
-                _cardStorageRepository.AddCard(card);
-                ShowError = true;
-                CanLogin = false;
-                ErrorText = $"Карта заблокирована после {MaxAttempts} неверных попыток. Карта помещена в хранилище.";
-                StatusText = "🔒 Карта заблокирована";
-                _failedAttempts = 0;
-            }
-            else
-            {
-                ShowError = true;
-                CanLogin = false;
-                ErrorText = $"Неверный PIN-код. Осталось попыток: {remaining}";
-                StatusText = "✗ Неверный PIN";
-            }
-            return;
-        }
-
-        _failedAttempts = 0;
-        _navigation.Navigate<MainMenuViewModel>(card);
     }
 
     private void UpdateStatus()

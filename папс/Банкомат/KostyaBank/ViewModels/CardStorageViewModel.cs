@@ -11,7 +11,8 @@ namespace KostyaBankApp.ViewModels;
 /// </summary>
 public class CardStorageViewModel : BaseViewModel
 {
-    private readonly ICardStorageRepository _cardStorage;
+    private readonly ICardStorageReader _cardStorageReader;
+    private readonly ICardStorageWriter _cardStorageWriter;
     private readonly INavigator _navigation;
     private readonly ICommand _backCommand;
     private readonly ICommand _clearCommand;
@@ -19,14 +20,15 @@ public class CardStorageViewModel : BaseViewModel
     private Visibility _statusVisibility = Visibility.Collapsed;
     private string _countText = "0";
 
-    public CardStorageViewModel(INavigator navigation, ICardStorageRepository cardStorage)
+    public CardStorageViewModel(INavigator navigation, ICardStorageReader cardStorageReader, ICardStorageWriter cardStorageWriter)
     {
         _navigation = navigation ?? throw new ArgumentNullException(nameof(navigation));
-        _cardStorage = cardStorage ?? throw new ArgumentNullException(nameof(cardStorage));
+        _cardStorageReader = cardStorageReader ?? throw new ArgumentNullException(nameof(cardStorageReader));
+        _cardStorageWriter = cardStorageWriter ?? throw new ArgumentNullException(nameof(cardStorageWriter));
         _backCommand = new SimpleCommand(() => _navigation.Navigate<ServiceViewModel>());
-        _clearCommand = new SimpleCommand(() => ClearStorage(), () => _cardStorage.Count > 0);
+        _clearCommand = new SimpleCommand(() => ClearStorage(), () => _cardStorageReader.Count > 0);
 
-        foreach (var card in _cardStorage.Cards)
+        foreach (var card in _cardStorageReader.Cards)
             Cards.Add(card);
         CountText = Cards.Count.ToString();
     }
@@ -51,7 +53,7 @@ public class CardStorageViewModel : BaseViewModel
         private set => SetProperty(ref _statusVisibility, value);
     }
 
-    public bool CanExecuteClear => _cardStorage.Count > 0;
+    public bool CanExecuteClear => _cardStorageReader.Count > 0;
 
     public ICommand BackCommand => _backCommand;
     public ICommand ClearCommand => _clearCommand;
@@ -59,7 +61,7 @@ public class CardStorageViewModel : BaseViewModel
     private void ClearStorage()
     {
         Cards.Clear();
-        _cardStorage.Clear();
+        _cardStorageWriter.Clear();
         CountText = "0";
         StatusText = "Хранилище карт очищено.";
         StatusVisibility = Visibility.Visible;

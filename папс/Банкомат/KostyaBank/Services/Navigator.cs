@@ -1,17 +1,16 @@
 using System.ComponentModel;
 using KostyaBankApp.Models;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace KostyaBankApp.Services;
 
 public class Navigator : INavigator, INotifyPropertyChanged
 {
-    private readonly IServiceProvider _serviceProvider;
+    private readonly IViewModelFactory _viewModelFactory;
     private object? _currentView;
 
-    public Navigator(IServiceProvider serviceProvider)
+    public Navigator(IViewModelFactory viewModelFactory)
     {
-        _serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+        _viewModelFactory = viewModelFactory ?? throw new ArgumentNullException(nameof(viewModelFactory));
     }
 
     public object? CurrentView
@@ -29,7 +28,7 @@ public class Navigator : INavigator, INotifyPropertyChanged
 
     public void Navigate<TViewModel>(params object[] args) where TViewModel : class
     {
-        CurrentView = ActivatorUtilities.CreateInstance<TViewModel>(_serviceProvider, args);
+        CurrentView = _viewModelFactory.Create<TViewModel>(args);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

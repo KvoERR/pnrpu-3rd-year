@@ -29,9 +29,14 @@ public class MoneyStorageRepository : IMoneyStorageRepository
     public bool RemoveMoney(int nominal, int count) => _model.RemoveMoney(nominal, count);
     public int ClearStorage() => _model.ClearStorage();
 
-    public void ReloadFromExcel()
+    public void Reload()
     {
         LoadFromExcel();
+    }
+
+    public void ReloadFromExcel()
+    {
+        Reload();
     }
 
     private void LoadFromExcel()

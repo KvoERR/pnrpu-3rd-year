@@ -1,9 +1,9 @@
 namespace KostyaBankApp.Models;
 
 /// <summary>
-/// Репозиторий для управления заблокированными картами.
+/// Чтение данных из хранилища заблокированных карт.
 /// </summary>
-public interface ICardStorageRepository
+public interface ICardStorageReader
 {
     /// <summary>
     /// Количество карт в хранилище.
@@ -19,7 +19,13 @@ public interface ICardStorageRepository
     /// Находит карту по номеру.
     /// </summary>
     Card? GetCardByNumber(string cardNumber);
+}
 
+/// <summary>
+/// Запись в хранилище заблокированных карт.
+/// </summary>
+public interface ICardStorageWriter
+{
     /// <summary>
     /// Добавляет карту в хранилище.
     /// </summary>
@@ -34,4 +40,11 @@ public interface ICardStorageRepository
     /// Очищает хранилище.
     /// </summary>
     void Clear();
+}
+
+/// <summary>
+/// Объединённый интерфейс для удобства регистрации в DI.
+/// </summary>
+public interface ICardStorageRepository : ICardStorageReader, ICardStorageWriter
+{
 }

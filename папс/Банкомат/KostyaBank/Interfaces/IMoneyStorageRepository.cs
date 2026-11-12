@@ -1,9 +1,9 @@
 namespace KostyaBankApp.Models;
 
 /// <summary>
-/// Репозиторий для управления наличными в банкомате.
+/// Чтение состояния хранилища наличных.
 /// </summary>
-public interface IMoneyStorageRepository
+public interface IMoneyStorageReader
 {
     /// <summary>
     /// Общая сумма наличных в хранилище.
@@ -14,7 +14,13 @@ public interface IMoneyStorageRepository
     /// Получает количество купюр указанного номинала.
     /// </summary>
     int GetCountByNominal(int nominal);
+}
 
+/// <summary>
+/// Запись в хранилище наличных.
+/// </summary>
+public interface IMoneyStorageWriter
+{
     /// <summary>
     /// Выдаёт наличные указанной суммы (жадный алгоритм по номиналам).
     /// </summary>
@@ -34,9 +40,22 @@ public interface IMoneyStorageRepository
     /// Очищает хранилище, возвращая общую сумму.
     /// </summary>
     int ClearStorage();
+}
 
+/// <summary>
+/// Перезагрузка данных хранилища из внешнего источника.
+/// </summary>
+public interface IMoneyStorageReloader
+{
     /// <summary>
-    /// Перезагружает данные из источника (Excel).
+    /// Перезагружает данные из источника.
     /// </summary>
-    void ReloadFromExcel();
+    void Reload();
+}
+
+/// <summary>
+/// Объединённый интерфейс для удобства регистрации в DI.
+/// </summary>
+public interface IMoneyStorageRepository : IMoneyStorageReader, IMoneyStorageWriter, IMoneyStorageReloader
+{
 }
