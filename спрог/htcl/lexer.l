@@ -23,8 +23,6 @@ static char *str_dup(const char *s) {
 "make"              { return TOK_MAKE; }
 "if"                { return TOK_IF; }
 "else"              { return TOK_ELSE; }
-"rule"              { return TOK_RULE; }
-"decl"              { return TOK_DECL; }
 
 [a-zA-Z_][a-zA-Z0-9_]* {
                         yylval.str = str_dup(yytext);
@@ -56,10 +54,6 @@ static char *str_dup(const char *s) {
 
 "="                 { return TOK_ASSIGN; }
 ","                 { return ','; }
-"("                 { return '('; }
-")"                 { return ')'; }
-"{"                 { return TOK_LBRACE; }
-"}"                 { return TOK_RBRACE; }
 "["                 { return '['; }
 "]"                 { return ']'; }
 

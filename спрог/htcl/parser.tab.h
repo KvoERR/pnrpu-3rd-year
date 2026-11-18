@@ -44,43 +44,6 @@
 #if YYDEBUG
 extern int yydebug;
 #endif
-/* "%code requires" blocks.  */
-#line 219 "parser.y"
-
-    typedef enum {
-        N_ASSIGN,
-        N_MAKE,
-        N_DIV_OPEN,
-        N_DIV_CLOSE,
-        N_IF,
-        N_CALL,
-        N_RETURN
-    } node_kind;
-
-    typedef struct Node {
-        node_kind kind;
-
-        /* assign / return */
-        char *tag, *name, *value;
-
-        /* make */
-        char **items;
-        int    nitems;
-
-        /* if */
-        char *cond_var;
-        int   cond_op;
-        int   cond_num;
-        struct Node *then_node, *else_node;
-
-        /* call */
-        char *result_tag, *result_name;
-
-        /* список */
-        struct Node *next;
-    } Node;
-
-#line 84 "parser.tab.h"
 
 /* Token kinds.  */
 #ifndef YYTOKENTYPE
@@ -106,11 +69,7 @@ extern int yydebug;
     TOK_H1 = 270,                  /* TOK_H1  */
     TOK_QUA = 271,                 /* TOK_QUA  */
     TOK_MAKE = 272,                /* TOK_MAKE  */
-    TOK_ASSIGN = 273,              /* TOK_ASSIGN  */
-    TOK_RULE = 274,                /* TOK_RULE  */
-    TOK_DECL = 275,                /* TOK_DECL  */
-    TOK_LBRACE = 276,              /* TOK_LBRACE  */
-    TOK_RBRACE = 277               /* TOK_RBRACE  */
+    TOK_ASSIGN = 273               /* TOK_ASSIGN  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -119,17 +78,18 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 256 "parser.y"
+#line 73 "parser.y"
 
     char *str;
     int   num;
 
-    struct { char *var; int op; int num; }         cond;
-    Node *node;
-    struct { char **types; char **names; int n; }  params;
-    struct { char *name; char **items; int n; }    call;
+    struct {
+        char *tag;
+        char *name;
+        char *value;
+    } assign;
 
-#line 133 "parser.tab.h"
+#line 93 "parser.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;

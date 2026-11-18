@@ -2,5 +2,5 @@ h1 name = "kostyan"
 p sex = "male"
 qua years = 20
 p age = ""
-rule agator(qua years) if years > 18, decl "vzrosly", else decl "molodyi"
-make (name sex agator(qua years))
+if years > 18, age = "vzrosliy", else age = "ne vzrosel"
+make [name sex age]
