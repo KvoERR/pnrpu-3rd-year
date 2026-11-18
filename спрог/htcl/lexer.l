@@ -3,27 +3,12 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdarg.h>
 
 static char *str_dup(const char *s) {
     if (!s) return NULL;
     char *copy = malloc(strlen(s) + 1);
     if (copy) strcpy(copy, s);
     return copy;
-}
-
-char *tok_make(const char *fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    int len = vsnprintf(NULL, 0, fmt, args) + 1;
-    va_end(args);
-    
-    char *buf = malloc(len);
-    va_start(args, fmt);
-    vsnprintf(buf, len, fmt, args);
-    va_end(args);
-    
-    return buf;
 }
 %}
 
@@ -32,12 +17,14 @@ char *tok_make(const char *fmt, ...) {
 
 %%
 
+"p"                 { return TOK_P; }
 "h1"                { return TOK_H1; }
-"make"              { return TOK_MAKE;}
-
-"$"                 { return TOK_DOLLAR; }
+"qua"               { return TOK_QUA; }
+"make"              { return TOK_MAKE; }
 "if"                { return TOK_IF; }
 "else"              { return TOK_ELSE; }
+"rule"              { return TOK_RULE; }
+"decl"              { return TOK_DECL; }
 
 [a-zA-Z_][a-zA-Z0-9_]* {
                         yylval.str = str_dup(yytext);
@@ -64,20 +51,24 @@ char *tok_make(const char *fmt, ...) {
 "<="                { return TOK_LTE; }
 "=="                { return TOK_EQ; }
 "!="                { return TOK_NEQ; }
+">"                 { return TOK_GT; }
+"<"                 { return TOK_LT; }
 
 "="                 { return TOK_ASSIGN; }
-"{"                 { return '{'; }
-"}"                 { return '}'; }
+","                 { return ','; }
 "("                 { return '('; }
 ")"                 { return ')'; }
-","                 { return ','; }
-"/"                 { return '/'; }
-"<"                 { return TOK_LT_TAG; }
-">"                 { return TOK_GT_TAG; }
+"{"                 { return TOK_LBRACE; }
+"}"                 { return TOK_RBRACE; }
+"["                 { return '['; }
+"]"                 { return ']'; }
 
-[ \t\n\r]+          { /* skip whitespace */ }
+[ \t\r]+            { /* skip spaces and tabs */ }
+\n                  { return '\n'; }
 
-.                   { fprintf(stderr, "Lexer error at line %d: unknown character '%c'\n", 
-                             yylineno, yytext[0]); }
+.                   {
+                        fprintf(stderr, "Lexer error at line %d: unknown character '%c'\n",
+                                yylineno, yytext[0]);
+                    }
 
 %%
