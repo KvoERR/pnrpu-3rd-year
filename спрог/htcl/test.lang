@@ -3,4 +3,4 @@ p sex = "male"
 qua years = 20
 p age = ""
 if years > 18, age = "vzrosliy", else age = "ne vzrosel"
-make [name sex age]
+make [[name sex] age]
