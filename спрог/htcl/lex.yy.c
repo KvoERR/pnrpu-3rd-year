@@ -925,7 +925,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 68 "lexer.l"
+#line 67 "lexer.l"
 ECHO;
 	YY_BREAK
 #line 931 "lex.yy.c"
@@ -1945,5 +1945,5 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 68 "lexer.l"
+#line 67 "lexer.l"
 

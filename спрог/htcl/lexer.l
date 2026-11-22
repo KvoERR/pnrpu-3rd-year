@@ -64,5 +64,4 @@ static char *str_dup(const char *s) {
                         fprintf(stderr, "Lexer error at line %d: unknown character '%c'\n",
                                 yylineno, yytext[0]);
                     }
-
 %%
