@@ -1,23 +1,25 @@
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
+using KostyaBankApp.Models;
 
-namespace KostyaBankApp.Models;
+namespace KostyaBankApp.ViewModels;
 
 /// <summary>
-/// Денежная купюра. В хранилище — одна штука (Count = 0).
-/// В ViewModel — модель ввода: Amount = номинал, Count = сколько штук.
+/// ViewModel-обёртка для ввода количества купюр конкретного номинала.
+/// Содержит UI-контракт (INotifyPropertyChanged) — находится в Presentation, а не в Domain.
 /// </summary>
-public class Money : INotifyPropertyChanged
+public class MoneyEntryViewModel : BaseViewModel
 {
     private readonly INominalProvider _nominalProvider;
     private int _amount;
     private int _count;
 
-    public Money(INominalProvider nominalProvider)
+    public MoneyEntryViewModel(INominalProvider nominalProvider)
     {
         _nominalProvider = nominalProvider ?? throw new ArgumentNullException(nameof(nominalProvider));
     }
 
+    /// <summary>
+    /// Номинал купюры (50, 100, 200, …). Устанавливается один раз при инициализации.
+    /// </summary>
     public int Amount
     {
         get => _amount;
@@ -37,9 +39,8 @@ public class Money : INotifyPropertyChanged
         set { _count = value; OnPropertyChanged(); OnPropertyChanged(nameof(Subtotal)); }
     }
 
+    /// <summary>
+    /// Подсумок: номинал × количество.
+    /// </summary>
     public int Subtotal => Amount * Count;
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-    protected void OnPropertyChanged([CallerMemberName] string? name = null)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }

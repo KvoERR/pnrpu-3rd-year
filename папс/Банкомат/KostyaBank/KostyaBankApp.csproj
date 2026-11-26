@@ -12,7 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="Presentation\App.xaml" />
-    <Page Include="Presentation\App.xaml" SubType="Designer" Generator="MSBuild:Compile" />
   </ItemGroup>
   <ItemGroup>
     <None Include="comp.xlsx">

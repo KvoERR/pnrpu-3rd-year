@@ -8,6 +8,7 @@ namespace KostyaBankApp.ViewModels;
 
 /// <summary>
 /// ViewModel для хранилища карт (выгрузка всех карт).
+/// Использует BlockedCardViewModel — изолирует UI от доменной модели.
 /// </summary>
 public class CardStorageViewModel : BaseViewModel
 {
@@ -29,11 +30,12 @@ public class CardStorageViewModel : BaseViewModel
         _clearCommand = new SimpleCommand(() => ClearStorage(), () => _cardStorageReader.Count > 0);
 
         foreach (var card in _cardStorageReader.Cards)
-            Cards.Add(card);
+            Cards.Add(new BlockedCardViewModel(card));
+
         CountText = Cards.Count.ToString();
     }
 
-    public ObservableCollection<Card> Cards { get; } = new ObservableCollection<Card>();
+    public ObservableCollection<BlockedCardViewModel> Cards { get; } = new();
 
     public string CountText
     {

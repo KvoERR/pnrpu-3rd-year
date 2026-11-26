@@ -35,8 +35,8 @@ public class MoneyStorageViewModel : BaseViewModel
         _unloadAllCommand = new SimpleCommand(() => UnloadAllMoney(), () => HasAnyEntries());
         _clearCommand = new SimpleCommand(() => ClearStorage(), () => _moneyReader.SumMoney() > 0);
 
-        MoneyEntries = new ObservableCollection<Money>(
-            nominalProvider.Nominals.Select(n => new Money(nominalProvider) { Amount = n }));
+        MoneyEntries = new ObservableCollection<MoneyEntryViewModel>(
+            nominalProvider.Nominals.Select(n => new MoneyEntryViewModel(nominalProvider) { Amount = n }));
 
         foreach (var money in MoneyEntries)
             money.PropertyChanged += OnMoneyEntryChanged;
@@ -45,7 +45,7 @@ public class MoneyStorageViewModel : BaseViewModel
         UpdateTotal();
     }
 
-    public ObservableCollection<Money> MoneyEntries { get; }
+    public ObservableCollection<MoneyEntryViewModel> MoneyEntries { get; }
 
     public string TotalText { get => _totalText; private set => SetProperty(ref _totalText, value); }
     public string StatusText { get => _statusText; private set => SetProperty(ref _statusText, value); }
@@ -58,7 +58,7 @@ public class MoneyStorageViewModel : BaseViewModel
 
     private void OnMoneyEntryChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(Money.Count))
+        if (e.PropertyName == nameof(MoneyEntryViewModel.Count))
         {
             (_loadAllCommand as SimpleCommand)?.RaiseCanExecuteChanged();
             (_unloadAllCommand as SimpleCommand)?.RaiseCanExecuteChanged();

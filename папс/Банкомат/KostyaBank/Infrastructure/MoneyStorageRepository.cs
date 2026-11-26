@@ -8,34 +8,59 @@ namespace KostyaBankApp.Models;
 /// </summary>
 public class MoneyStorageRepository : IMoneyStorageRepository
 {
-    private readonly MoneyStorageModel _model;
+    private readonly IMoneyStorageData _storage;
     private readonly INominalProvider _nominalProvider;
     private readonly string _filePath;
 
-    public MoneyStorageRepository(MoneyStorageModel model, INominalProvider nominalProvider, string filePath)
+    public MoneyStorageRepository(IMoneyStorageData storage, INominalProvider nominalProvider, string filePath)
     {
-        _model = model ?? throw new ArgumentNullException(nameof(model));
+        _storage = storage ?? throw new ArgumentNullException(nameof(storage));
         _nominalProvider = nominalProvider ?? throw new ArgumentNullException(nameof(nominalProvider));
         _filePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
         LoadFromExcel();
     }
 
-    public int SumMoney() => _model.SumMoney();
-    public int GetCountByNominal(int nominal) => _model.GetCountByNominal(nominal);
-    public void TakeMoney(int amount) => _model.TakeMoney(amount);
-    public void AddMoney(int nominal, int count) => _model.AddMoney(nominal, count);
-    public bool RemoveMoney(int nominal, int count) => _model.RemoveMoney(nominal, count);
-    public int ClearStorage() => _model.ClearStorage();
-
-    public void Reload()
+    public int SumMoney() => _storage.Sum;
+    public int GetCountByNominal(int nominal) => _storage.GetCount(nominal);
+    public void TakeMoney(int amount)
     {
-        LoadFromExcel();
+        if (amount > SumMoney())
+            throw new InvalidOperationException("Недостаточно средств в хранилище");
+
+        int remaining = amount;
+        var billsToTake = new List<(int nominal, int count)>();
+
+        foreach (var (nominal, _) in _storage.GetAll().OrderByDescending(x => x.Nominal))
+        {
+            if (remaining <= 0) break;
+
+            int available = _storage.GetCount(nominal);
+            int canTake = Math.Min(remaining / nominal, available);
+
+            if (canTake > 0)
+            {
+                billsToTake.Add((nominal, canTake));
+                remaining -= nominal * canTake;
+            }
+        }
+
+        if (remaining > 0)
+            throw new InvalidOperationException("Невозможно выдать указанную сумму доступными номиналами");
+
+        foreach (var (nominal, count) in billsToTake)
+            _storage.Remove(nominal, count);
+    }
+    public void AddMoney(int nominal, int count) => _storage.Add(nominal, count);
+    public bool RemoveMoney(int nominal, int count) => _storage.Remove(nominal, count);
+    public int ClearStorage()
+    {
+        int total = _storage.Sum;
+        _storage.Clear();
+        return total;
     }
 
-    public void ReloadFromExcel()
-    {
-        Reload();
-    }
+    public void Reload() => LoadFromExcel();
+    public void ReloadFromExcel() => Reload();
 
     private void LoadFromExcel()
     {
@@ -49,7 +74,8 @@ public class MoneyStorageRepository : IMoneyStorageRepository
 
         if (worksheet == null) return;
 
-        var data = new Dictionary<int, int>();
+        _storage.Clear();
+
         int row = 2;
         while (true)
         {
@@ -61,38 +87,10 @@ public class MoneyStorageRepository : IMoneyStorageRepository
             if (int.TryParse(nominalStr, out var nominal) && int.TryParse(countStr, out var count))
             {
                 if (count > 0)
-                    data[nominal] = count;
+                    _storage.Add(nominal, count);
             }
 
             row++;
         }
-
-        _model.LoadData(data);
-    }
-
-    private void SaveToExcel()
-    {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
-        using var package = new ExcelPackage(new System.IO.FileInfo(_filePath));
-        var worksheet = package.Workbook.Worksheets[0];
-
-        int maxRows = Math.Max(_model.GetData().Count + 1, 7);
-        for (int i = 2; i <= maxRows; i++)
-        {
-            worksheet.ClearCell(i, 1);
-            worksheet.ClearCell(i, 2);
-        }
-
-        var allNominals = _nominalProvider.Nominals;
-        var data = _model.GetData();
-        for (int i = 0; i < allNominals.Count; i++)
-        {
-            var nominal = allNominals[i];
-            worksheet.SetCell(i + 2, 1, nominal);
-            worksheet.SetCell(i + 2, 2, data.TryGetValue(nominal, out var count) ? count : 0);
-        }
-
-        package.Save();
     }
 }

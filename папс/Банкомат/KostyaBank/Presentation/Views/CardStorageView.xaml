@@ -1,7 +1,7 @@
 <UserControl x:Class="KostyaBankApp.Views.CardStorageView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:models="clr-namespace:KostyaBankApp.Models"
+              xmlns:viewmodels="clr-namespace:KostyaBankApp.ViewModels"
              Height="500" Width="520">
 
     <UserControl.Resources>
@@ -132,7 +132,7 @@
                     <ListView ItemsSource="{Binding Cards}" BorderThickness="0"
                               Background="Transparent" FontSize="13">
                         <ListView.ItemTemplate>
-                            <DataTemplate DataType="models:Card">
+                            <DataTemplate DataType="viewmodels:BlockedCardViewModel">
                                 <StackPanel Margin="5">
                                     <TextBlock FontWeight="SemiBold">
                                         <TextBlock Text="{Binding CardNumber}"/>
