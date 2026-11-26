@@ -49,13 +49,28 @@ public class MoneyStorageRepository : IMoneyStorageRepository
 
         foreach (var (nominal, count) in billsToTake)
             _storage.Remove(nominal, count);
+
+        SaveToExcel();
     }
-    public void AddMoney(int nominal, int count) => _storage.Add(nominal, count);
-    public bool RemoveMoney(int nominal, int count) => _storage.Remove(nominal, count);
+
+    public void AddMoney(int nominal, int count)
+    {
+        _storage.Add(nominal, count);
+        SaveToExcel();
+    }
+
+    public bool RemoveMoney(int nominal, int count)
+    {
+        var result = _storage.Remove(nominal, count);
+        if (result) SaveToExcel();
+        return result;
+    }
+
     public int ClearStorage()
     {
         int total = _storage.Sum;
         _storage.Clear();
+        SaveToExcel();
         return total;
     }
 
@@ -92,5 +107,32 @@ public class MoneyStorageRepository : IMoneyStorageRepository
 
             row++;
         }
+    }
+
+    private void SaveToExcel()
+    {
+        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+        using var package = new ExcelPackage(new System.IO.FileInfo(_filePath));
+        var worksheet = package.Workbook.Worksheets[0];
+
+        int maxRows = Math.Max(_storage.GetAll().Count() + 1, 7);
+        for (int i = 2; i <= maxRows; i++)
+        {
+            worksheet.ClearCell(i, 1);
+            worksheet.ClearCell(i, 2);
+        }
+
+        var allNominals = _nominalProvider.Nominals;
+        int row = 2;
+
+        foreach (var nominal in allNominals)
+        {
+            worksheet.SetCell(row, 1, nominal);
+            worksheet.SetCell(row, 2, _storage.GetCount(nominal));
+            row++;
+        }
+
+        package.Save();
     }
 }
